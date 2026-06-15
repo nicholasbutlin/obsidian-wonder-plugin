@@ -2,15 +2,15 @@
 // Vitest aliases `obsidian` to this file (see vitest.config.ts).
 
 export class TAbstractFile {
-  path = "";
+	path = "";
 }
 
 export class TFile extends TAbstractFile {
-  basename = "";
+	basename = "";
 }
 
 export class Notice {
-  constructor(public message: string) {}
+	constructor(public message: string) {}
 }
 
 export class App {}

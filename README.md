@@ -29,10 +29,12 @@ Shortly after you stop typing, the plugin:
 2. Appends the action under the `## ToDo` heading of your Kanban note, with a
    backlink to the source note and a matching block anchor so the `ACTION`
    link resolves:
+
    ```md
    ## ToDo
+
    - follow up with Sam about the budget ^a1b2c3d
-   [[My Note]]
+     [[My Note]]
    ```
 
 Both `@action` and `@action:` are recognised, and every marker in a note is
@@ -41,11 +43,11 @@ pass once you settle.
 
 ## Settings
 
-| Setting | Description | Default |
-| --- | --- | --- |
-| **Date Format** | [Moment.js](https://momentjs.com/docs/#/displaying/format/) format for the date heading. | `YYYY-MM-DD` |
-| **Kanban Path** | Name of the Kanban note (without `.md`) that actions are routed to. | `ToDo Auto` |
-| **Process Refresh Interval (seconds)** | How long to wait after an edit before scanning a note for `@action` markers. | `10` |
+| Setting                                | Description                                                                              | Default      |
+| -------------------------------------- | ---------------------------------------------------------------------------------------- | ------------ |
+| **Date Format**                        | [Moment.js](https://momentjs.com/docs/#/displaying/format/) format for the date heading. | `YYYY-MM-DD` |
+| **Kanban Path**                        | Name of the Kanban note (without `.md`) that actions are routed to.                      | `ToDo Auto`  |
+| **Process Refresh Interval (seconds)** | How long to wait after an edit before scanning a note for `@action` markers.             | `10`         |
 
 The Kanban note must contain a `## ToDo` heading; new actions are inserted
 directly beneath it.
@@ -56,7 +58,7 @@ directly beneath it.
    [release](https://github.com/nicholasbutlin/obsidian-wonder-plugin/releases).
 2. Copy them into your vault under
    `.obsidian/plugins/obsidian-wonder-plugin/`.
-3. Reload Obsidian and enable **Wonder Plugin** in *Settings → Community plugins*.
+3. Reload Obsidian and enable **Wonder Plugin** in _Settings → Community plugins_.
 
 Requires Obsidian `1.2.0` or newer.
 
