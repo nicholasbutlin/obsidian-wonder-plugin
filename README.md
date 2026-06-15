@@ -1,32 +1,94 @@
-# Obsidian Wonder Plugin
+# Wonder Plugin for Obsidian
 
-This is a plugin for [Obsidian](https://obsidian.md) that adds a new feature to the app.
+[![CI](https://github.com/nicholasbutlin/obsidian-wonder-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/nicholasbutlin/obsidian-wonder-plugin/actions/workflows/ci.yml)
 
-## First time developing plugins?
+A small [Obsidian](https://obsidian.md) plugin that speeds up daily note-taking:
+insert date headings from the editor menu, and turn inline `@action` markers
+into linked tasks on a central Kanban note.
 
-Quick starting guide for new plugin devs:
+## Features
 
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files).
-- Install hotreload plugin to make life easier! This will automatically reload your plugin when you save changes.
-- based on: <https://github.com/obsidianmd/obsidian-sample-plugin/releases>
+### Insert date heading
 
-## Releasing new releases
+Right-click in the editor and choose **Insert date heading** to drop a heading
+with today's date at the cursor, e.g. `# 2026-06-15`. The date format is
+configurable.
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`.
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+### `@action` markers → Kanban
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+Write an action inline in any note:
 
-## Adding your plugin to the community plugin list
+```md
+@action follow up with Sam about the budget
+```
 
-- Check <https://github.com/obsidianmd/obsidian-releases/blob/master/plugin-review.md>
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at <https://github.com/obsidianmd/obsidian-releases> to add your plugin.
+Shortly after you stop typing, the plugin:
 
+1. Rewrites the marker in place as a link back to the Kanban file:
+   `**[[ToDo Auto#^a1b2c3d|ACTION]]:** follow up with Sam about the budget`
+2. Appends the action under the `## ToDo` heading of your Kanban note, with a
+   backlink to the source note and a matching block anchor so the `ACTION`
+   link resolves:
+   ```md
+   ## ToDo
+   - follow up with Sam about the budget ^a1b2c3d
+   [[My Note]]
+   ```
+
+Both `@action` and `@action:` are recognised, and every marker in a note is
+processed. Scans are debounced per file, so a burst of edits triggers a single
+pass once you settle.
+
+## Settings
+
+| Setting | Description | Default |
+| --- | --- | --- |
+| **Date Format** | [Moment.js](https://momentjs.com/docs/#/displaying/format/) format for the date heading. | `YYYY-MM-DD` |
+| **Kanban Path** | Name of the Kanban note (without `.md`) that actions are routed to. | `ToDo Auto` |
+| **Process Refresh Interval (seconds)** | How long to wait after an edit before scanning a note for `@action` markers. | `10` |
+
+The Kanban note must contain a `## ToDo` heading; new actions are inserted
+directly beneath it.
+
+## Installation (manual)
+
+1. Download `main.js`, `manifest.json`, and `styles.css` from the latest
+   [release](https://github.com/nicholasbutlin/obsidian-wonder-plugin/releases).
+2. Copy them into your vault under
+   `.obsidian/plugins/obsidian-wonder-plugin/`.
+3. Reload Obsidian and enable **Wonder Plugin** in *Settings → Community plugins*.
+
+Requires Obsidian `1.2.0` or newer.
+
+## Development
+
+```bash
+npm install     # install dependencies
+npm run dev     # build and watch (writes main.js)
+npm test        # run the Vitest suite
+npm run build   # type-check + production build
+```
+
+Source lives in `src/`:
+
+- `main.ts` — plugin lifecycle, event registration, per-file debounce.
+- `action-processor.ts` — `@action` detection and Kanban routing.
+- `settings.ts` — settings tab.
+
+Tests run against a small `obsidian` module mock (`test/obsidian-mock.ts`),
+aliased in `vitest.config.ts`.
+
+## Releasing
+
+Releases are automated with [semantic-release](https://semantic-release.gitbook.io/).
+Pushing to `main` runs the release workflow, which derives the next version from
+[Conventional Commits](https://www.conventionalcommits.org/), then:
+
+- bumps `manifest.json`, `versions.json`, and `package.json`,
+- updates `CHANGELOG.md`,
+- tags the release (no `v` prefix, as Obsidian requires), and
+- attaches `main.js`, `manifest.json`, and `styles.css` to the GitHub release.
+
+Commit messages drive the version bump: `fix:` → patch, `feat:` → minor,
+`feat!:`/`BREAKING CHANGE:` → major. Commits of other types (`chore:`, `docs:`,
+`ci:`, …) do not cut a release.
