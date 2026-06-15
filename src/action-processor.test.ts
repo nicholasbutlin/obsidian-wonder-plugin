@@ -25,6 +25,12 @@ class FakeVault {
     this.contents.set(file, data);
   }
 
+  async process(file: TFile, fn: (data: string) => string): Promise<string> {
+    const next = fn(this.contents.get(file) ?? "");
+    this.contents.set(file, next);
+    return next;
+  }
+
   getAbstractFileByPath(path: string): TFile | null {
     return this.byPath.get(path) ?? null;
   }
