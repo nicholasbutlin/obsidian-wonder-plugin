@@ -5,7 +5,7 @@ const targetVersion = process.argv[2] || process.env.npm_package_version;
 
 if (!targetVersion) {
 	throw new Error(
-		"No target version: pass it as an argument or run via `npm version`."
+		"No target version: pass it as an argument or run via `npm version`.",
 	);
 }
 
