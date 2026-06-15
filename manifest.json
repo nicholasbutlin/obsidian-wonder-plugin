@@ -1,0 +1,11 @@
+{
+	"id": "obsidian-wonder-plugin",
+	"name": "Wonder Plugin",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "Hoping to do some wonderful things with Obsidian",
+	"author": "Nick Butlin",
+	"authorUrl": "https://obsidian.md",
+	"fundingUrl": "https://obsidian.md/pricing",
+	"isDesktopOnly": false
+}
