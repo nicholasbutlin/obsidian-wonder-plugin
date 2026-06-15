@@ -7,6 +7,10 @@ export default class WonderPlugin extends Plugin {
 	settings: WonderSettings;
 	actionProcessor: ActionProcessor;
 
+	// Pending action scans, keyed by file path, so rapid edits to the same
+	// note collapse into a single scan once editing settles.
+	private scanTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
 	async onload() {
 		await this.loadSettings();
 
@@ -35,8 +39,16 @@ export default class WonderPlugin extends Plugin {
 		editor.replaceSelection(`# ${date}`);
 	}
 
+	onunload() {
+		for (const timer of this.scanTimers.values()) {
+			clearTimeout(timer);
+		}
+		this.scanTimers.clear();
+	}
+
 	// Scan modified notes for @action markers, but skip the Kanban file itself.
-	// A delay lets the file settle before we read and rewrite it.
+	// Debounced per file so a burst of edits triggers only one scan once the
+	// file settles.
 	scheduleActionScan(file: TAbstractFile) {
 		if (
 			!(file instanceof TFile) ||
@@ -44,9 +56,19 @@ export default class WonderPlugin extends Plugin {
 		) {
 			return;
 		}
-		setTimeout(() => {
-			this.actionProcessor.processActionMarkers(file);
-		}, this.settings.processRefreshInterval * 1000);
+
+		const pending = this.scanTimers.get(file.path);
+		if (pending) {
+			clearTimeout(pending);
+		}
+
+		this.scanTimers.set(
+			file.path,
+			setTimeout(() => {
+				this.scanTimers.delete(file.path);
+				this.actionProcessor.processActionMarkers(file);
+			}, this.settings.processRefreshInterval * 1000)
+		);
 	}
 
 	async loadSettings() {

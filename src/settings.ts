@@ -26,8 +26,6 @@ export class WonderSettingTab extends PluginSettingTab {
 
     containerEl.empty();
 
-    containerEl.createEl("h2", { text: "Wonder plugin settings." });
-
     this.addTextSetting(
       "Date Format",
       "Desired date format.",
