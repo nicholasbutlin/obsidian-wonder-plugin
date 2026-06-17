@@ -51,26 +51,28 @@ export default class WonderPlugin extends Plugin {
 		this.scanTimers.clear();
 	}
 
-	// Route a modified file by type: Kanban board files get their picker dates
-	// normalized to the Tasks emoji format; every other note is scanned for
-	// @action markers. Both paths are debounced per file so a burst of edits
-	// triggers only one run once the file settles.
+	// Debounce a modified file's scan so a burst of edits triggers one run once
+	// the file settles. The board-vs-note routing is decided when the timer
+	// fires, NOT here: a Kanban save invalidates the metadata cache, so at event
+	// time `getFileCache` can briefly report no frontmatter and a board would be
+	// mis-routed to the action scan. By the time the debounce fires the cache has
+	// settled and `isBoardFile` is reliable.
 	scheduleScan(file: TAbstractFile) {
 		if (!(file instanceof TFile)) return;
-
-		const run = this.isBoardFile(file)
-			? () =>
-					this.settings.normalizeKanbanDates &&
-					this.dateNormalizer.normalize(file)
-			: () => this.actionProcessor.processActionMarkers(file);
-
-		this.debounce(file.path, run);
+		this.debounce(file.path, () => this.scan(file));
 	}
 
-	// Board detection reads frontmatter from the metadata cache rather than the
-	// file, avoiding a second read. `kanban-plugin: board` is static frontmatter
-	// present since the board was created, so even a cache entry that lags this
-	// modify event still carries it.
+	// Route a settled file: Kanban board files get their picker dates normalized
+	// to the Tasks emoji format; every other note is scanned for @action markers.
+	private scan(file: TFile) {
+		if (this.isBoardFile(file)) {
+			if (this.settings.normalizeKanbanDates)
+				this.dateNormalizer.normalize(file);
+		} else {
+			this.actionProcessor.processActionMarkers(file);
+		}
+	}
+
 	private isBoardFile(file: TFile): boolean {
 		return (
 			this.app.metadataCache.getFileCache(file)?.frontmatter?.[

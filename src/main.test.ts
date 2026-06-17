@@ -108,6 +108,27 @@ describe("WonderPlugin.scheduleScan", () => {
 		expect(normalizes).toHaveLength(0);
 	});
 
+	it("decides board-vs-note when the debounce fires, not when the event does", () => {
+		// Kanban's write invalidates the metadata cache, so at event time the
+		// frontmatter is briefly missing; it's repopulated before the debounce
+		// fires. Routing must use the settled cache, or boards get mis-scanned.
+		const { plugin, scans, normalizes } = makePlugin();
+		let cacheReady = false;
+		(
+			plugin as unknown as {
+				app: { metadataCache: { getFileCache: (f: TFile) => unknown } };
+			}
+		).app.metadataCache.getFileCache = () =>
+			cacheReady ? { frontmatter: { "kanban-plugin": "board" } } : null;
+
+		plugin.scheduleScan(makeTFile("ToDo Auto.md", "ToDo Auto"));
+		cacheReady = true; // cache settles before the timer fires
+		vi.advanceTimersByTime(10_000);
+
+		expect(normalizes).toHaveLength(1);
+		expect(scans).toHaveLength(0);
+	});
+
 	it("cancels pending scans on unload", () => {
 		const { plugin, scans } = makePlugin();
 
