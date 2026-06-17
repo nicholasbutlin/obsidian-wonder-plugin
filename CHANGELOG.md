@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.3.0...1.4.0) (2026-06-17)
+
+
+### Features
+
+* re-render open Kanban board after normalizing its dates ([6399526](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/6399526f635d361651db10a25f420478d16e26fd))
+
 # [1.3.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.2.0...1.3.0) (2026-06-17)
 
 
