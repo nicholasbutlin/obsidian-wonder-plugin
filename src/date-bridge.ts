@@ -1,6 +1,6 @@
 import { TFile } from "obsidian";
 import WonderPlugin from "./main";
-import { formatDue } from "./task-format";
+import { DUE_EMOJI, formatDue } from "./task-format";
 
 // Kanban's date picker writes brace dates (`@{YYYY-MM-DD}`) when
 // `link-date-to-daily-note` is off. We rewrite those to the canonical Tasks
@@ -15,13 +15,28 @@ import { formatDue } from "./task-format";
 // appears we drop the time (core Tasks dates are date-only).
 const KANBAN_BRACE_DATE = /@\{(\d{4}-\d{2}-\d{2})(?:[ T]\d{2}:\d{2})?\}/g;
 
-// Cheap pre-check so we can skip files with nothing to convert.
+// Cheap per-line/whole-file pre-check (no `g` flag, so it carries no lastIndex
+// state and is safe for `.test()`).
 const BRACE_GUARD = /@\{\d{4}-\d{2}-\d{2}/;
 
+// An already-canonical due date plus any leading whitespace, so we can drop a
+// superseded date without leaving a double space behind.
+const EXISTING_DUE = new RegExp(`\\s*${DUE_EMOJI} \\d{4}-\\d{2}-\\d{2}`, "g");
+
 export function normalizeKanbanDates(text: string): string {
-	return text.replace(KANBAN_BRACE_DATE, (_match, date: string) =>
-		formatDue(date),
-	);
+	return text.split("\n").map(reconcileLine).join("\n");
+}
+
+// A freshly-picked brace date supersedes any due date already on the same line:
+// Kanban can't edit a 📅 it doesn't own, so re-picking inserts a new @{} next to
+// the old date. Drop the stale 📅 first, then convert the brace, leaving exactly
+// one canonical due date. Lines without a brace date (and their 📅) are left
+// untouched.
+function reconcileLine(line: string): string {
+	if (!BRACE_GUARD.test(line)) return line;
+	return line
+		.replace(EXISTING_DUE, "")
+		.replace(KANBAN_BRACE_DATE, (_match, date: string) => formatDue(date));
 }
 
 export class DateNormalizer {

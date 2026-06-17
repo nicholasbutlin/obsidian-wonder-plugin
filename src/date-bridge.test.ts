@@ -35,6 +35,30 @@ describe("normalizeKanbanDates", () => {
 		const text = "# Notes\n- [ ] something 📅 2026-06-14 @[[2026-03-27]]\n";
 		expect(normalizeKanbanDates(text)).toBe(text);
 	});
+
+	// Re-picking a date: Kanban can't edit a 📅 it doesn't own, so it inserts a
+	// fresh @{} alongside the existing 📅. The picked date must supersede the old
+	// one rather than leaving two due dates on the card.
+	it("replaces an existing 📅 on a line when a new brace date is picked", () => {
+		expect(
+			normalizeKanbanDates(
+				"- [ ] Pay HMRC 📅 2026-06-30 #General @{2026-07-15}",
+			),
+		).toBe("- [ ] Pay HMRC #General 📅 2026-07-15");
+	});
+
+	it("only replaces the 📅 on the line that has the new brace date", () => {
+		expect(
+			normalizeKanbanDates(
+				"- [ ] a 📅 2026-06-30\n- [ ] b 📅 2026-01-01 @{2026-07-15}",
+			),
+		).toBe("- [ ] a 📅 2026-06-30\n- [ ] b 📅 2026-07-15");
+	});
+
+	it("is idempotent through a replace", () => {
+		const once = normalizeKanbanDates("- [ ] b 📅 2026-01-01 @{2026-07-15}");
+		expect(normalizeKanbanDates(once)).toBe(once);
+	});
 });
 
 // In-memory Vault stand-in with a write counter so we can assert the no-op guard.
