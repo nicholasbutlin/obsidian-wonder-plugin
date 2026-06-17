@@ -59,6 +59,32 @@ describe("normalizeKanbanDates", () => {
 		const once = normalizeKanbanDates("- [ ] b 📅 2026-01-01 @{2026-07-15}");
 		expect(normalizeKanbanDates(once)).toBe(once);
 	});
+
+	// Tasks reads the date on a card's main `- [ ]` line, and Kanban only renders
+	// inline metadata there too. A picker date that lands on an indented
+	// continuation line must be lifted to the card's main line.
+	it("lifts a converted date from a continuation line to the card's main line", () => {
+		expect(
+			normalizeKanbanDates("- [ ] Policies:\n\tdetail @{2026-06-20}"),
+		).toBe("- [ ] Policies: 📅 2026-06-20\n\tdetail");
+	});
+
+	it("heals an existing 📅 stranded on a continuation line (no brace)", () => {
+		expect(
+			normalizeKanbanDates("- [ ] Strategy\n\t[[Plan review]] 📅 2026-06-18"),
+		).toBe("- [ ] Strategy 📅 2026-06-18\n\t[[Plan review]]");
+	});
+
+	it("leaves a card whose 📅 is already on the main line untouched", () => {
+		const text = "- [ ] a 📅 2026-06-30\n\tsome detail";
+		expect(normalizeKanbanDates(text)).toBe(text);
+	});
+
+	it("replaces and lifts on a re-picked multi-line card", () => {
+		expect(
+			normalizeKanbanDates("- [ ] task 📅 2026-01-01\n\tnote @{2026-07-15}"),
+		).toBe("- [ ] task 📅 2026-07-15\n\tnote");
+	});
 });
 
 // In-memory Vault stand-in with a write counter so we can assert the no-op guard.

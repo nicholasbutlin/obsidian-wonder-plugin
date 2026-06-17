@@ -3,40 +3,98 @@ import WonderPlugin from "./main";
 import { DUE_EMOJI, formatDue } from "./task-format";
 
 // Kanban's date picker writes brace dates (`@{YYYY-MM-DD}`) when
-// `link-date-to-daily-note` is off. We rewrite those to the canonical Tasks
-// due token so Tasks/Dataview/Remindian can read them.
+// `link-date-to-daily-note` is off. We rewrite those to the canonical Tasks due
+// token so Tasks/Dataview/Remindian can read them, and place the result on the
+// card's main `- [ ]` line — the only place Tasks reads a date and Kanban
+// renders it as an inline date chip.
 //
 // `@[[YYYY-MM-DD]]` reference stamps are intentionally NOT matched: they are
-// "date-added" backlinks, not due dates, and converting them would invent
-// false due dates.
+// "date-added" backlinks, not due dates, and converting them would invent false
+// due dates.
 //
 // The optional `[ T]HH:mm` branch is defensive — this vault has no Kanban time
 // trigger configured, so date-times don't occur in practice, but if one ever
 // appears we drop the time (core Tasks dates are date-only).
 const KANBAN_BRACE_DATE = /@\{(\d{4}-\d{2}-\d{2})(?:[ T]\d{2}:\d{2})?\}/g;
 
-// Cheap per-line/whole-file pre-check (no `g` flag, so it carries no lastIndex
-// state and is safe for `.test()`).
-const BRACE_GUARD = /@\{\d{4}-\d{2}-\d{2}/;
+// Token-stripping variants consume a leading space so removing a date doesn't
+// leave a double space behind.
+const BRACE_STRIP = /\s*@\{\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2})?\}/g;
+const DUE_STRIP = new RegExp(`\\s*${DUE_EMOJI} \\d{4}-\\d{2}-\\d{2}`, "g");
+const DUE_DATE = new RegExp(`${DUE_EMOJI} (\\d{4}-\\d{2}-\\d{2})`, "g");
 
-// An already-canonical due date plus any leading whitespace, so we can drop a
-// superseded date without leaving a double space behind.
-const EXISTING_DUE = new RegExp(`\\s*${DUE_EMOJI} \\d{4}-\\d{2}-\\d{2}`, "g");
+// Cheap, stateless presence check (no `g` flag, so safe for `.test()`).
+const HAS_BRACE = /@\{\d{4}-\d{2}-\d{2}/;
+
+// A board card is a top-level list item; its continuation lines are indented or
+// blank. Headings, the settings block, and thematic breaks end a card.
+const CARD_START = /^[-*] /;
+const CARD_BOUNDARY = /^(#{1,6} |%%|\*\*\*\s*$|---\s*$)/;
 
 export function normalizeKanbanDates(text: string): string {
-	return text.split("\n").map(reconcileLine).join("\n");
+	const out: string[] = [];
+	let card: string[] | null = null;
+
+	const flushCard = () => {
+		if (card) {
+			out.push(...reconcileCard(card));
+			card = null;
+		}
+	};
+
+	for (const line of text.split("\n")) {
+		if (CARD_START.test(line)) {
+			flushCard();
+			card = [line];
+		} else if (card && !CARD_BOUNDARY.test(line)) {
+			card.push(line);
+		} else {
+			flushCard();
+			out.push(reconcileStandalone(line));
+		}
+	}
+	flushCard();
+
+	return out.join("\n");
 }
 
-// A freshly-picked brace date supersedes any due date already on the same line:
-// Kanban can't edit a 📅 it doesn't own, so re-picking inserts a new @{} next to
-// the old date. Drop the stale 📅 first, then convert the brace, leaving exactly
-// one canonical due date. Lines without a brace date (and their 📅) are left
-// untouched.
-function reconcileLine(line: string): string {
-	if (!BRACE_GUARD.test(line)) return line;
+// Lift a card's due date onto its main line: a freshly-picked brace date wins
+// over any existing 📅; otherwise an already-present 📅 that has drifted onto a
+// continuation line is moved up. A card whose single 📅 already sits on the main
+// line is left exactly as-is.
+function reconcileCard(card: string[]): string[] {
+	const braceDate = lastMatch(card.join("\n"), KANBAN_BRACE_DATE);
+	const dueLines: { index: number; date: string }[] = [];
+	card.forEach((line, index) => {
+		const date = lastMatch(line, DUE_DATE);
+		if (date !== null) dueLines.push({ index, date });
+	});
+
+	if (!braceDate) {
+		if (dueLines.length === 0) return card; // no dates at all
+		if (dueLines.length === 1 && dueLines[0].index === 0) return card; // already canonical
+	}
+
+	const due = braceDate ?? dueLines[dueLines.length - 1].date;
+	const stripped = card.map((line) =>
+		line.replace(BRACE_STRIP, "").replace(DUE_STRIP, ""),
+	);
+	stripped[0] = `${stripped[0].replace(/[ \t]+$/, "")} ${formatDue(due)}`;
+	return stripped;
+}
+
+// Lines outside any card (rare on a board). Convert a brace date in place; never
+// disturb a line that has no brace.
+function reconcileStandalone(line: string): string {
+	if (!HAS_BRACE.test(line)) return line;
 	return line
-		.replace(EXISTING_DUE, "")
+		.replace(DUE_STRIP, "")
 		.replace(KANBAN_BRACE_DATE, (_match, date: string) => formatDue(date));
+}
+
+function lastMatch(text: string, pattern: RegExp): string | null {
+	const matches = [...text.matchAll(pattern)];
+	return matches.length ? matches[matches.length - 1][1] : null;
 }
 
 export class DateNormalizer {
@@ -44,13 +102,11 @@ export class DateNormalizer {
 
 	async normalize(file: TFile): Promise<void> {
 		const content = await this.plugin.app.vault.read(file);
-		if (!BRACE_GUARD.test(content)) return; // nothing to do
-
 		const next = normalizeKanbanDates(content);
-		// Skip the no-op write: this is the loop guard. After conversion no
-		// `@{}` remains, so the re-triggered `modify` event exits at BRACE_GUARD.
+		// The no-op-write guard is also the loop guard: a normalized board has no
+		// brace dates and every 📅 on its main line, so the re-triggered `modify`
+		// event recomputes an identical string and exits here without writing.
 		if (next === content) return;
-
 		await this.plugin.app.vault.process(file, () => next);
 	}
 }
