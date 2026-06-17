@@ -111,8 +111,29 @@ class FakeVault {
 	}
 }
 
-function makeNormalizer(vault: FakeVault): DateNormalizer {
-	const plugin = { app: { vault } };
+// A stand-in for an open Kanban board view, recording setViewData calls.
+class FakeKanbanLeaf {
+	view: {
+		file: { path: string };
+		setViewData: (data: string, clear: boolean) => void;
+	};
+	calls: { data: string; clear: boolean }[] = [];
+
+	constructor(path: string) {
+		this.view = {
+			file: { path },
+			setViewData: (data, clear) => this.calls.push({ data, clear }),
+		};
+	}
+}
+
+function makeNormalizer(
+	vault: FakeVault,
+	leaves: FakeKanbanLeaf[] = [],
+): DateNormalizer {
+	const plugin = {
+		app: { vault, workspace: { getLeavesOfType: () => leaves } },
+	};
 	return new DateNormalizer(plugin as never);
 }
 
@@ -155,5 +176,47 @@ describe("DateNormalizer.normalize", () => {
 		await makeNormalizer(vault).normalize(board);
 
 		expect(await vault.read(board)).toContain(settings);
+	});
+
+	// Obsidian won't push an external write into a focused board view, so after
+	// writing we re-feed the content to any open Kanban leaf for the file.
+	it("re-renders an open Kanban board showing the file", async () => {
+		const vault = new FakeVault();
+		const board = vault.addFile(
+			"ToDo Auto.md",
+			"## ToDo\n- [ ] ship it @{2026-06-20}\n",
+		);
+		const leaf = new FakeKanbanLeaf("ToDo Auto.md");
+
+		await makeNormalizer(vault, [leaf]).normalize(board);
+
+		expect(leaf.calls).toHaveLength(1);
+		expect(leaf.calls[0].data).toContain("📅 2026-06-20");
+	});
+
+	it("does not refresh a Kanban board showing a different file", async () => {
+		const vault = new FakeVault();
+		const board = vault.addFile(
+			"ToDo Auto.md",
+			"## ToDo\n- [ ] ship it @{2026-06-20}\n",
+		);
+		const other = new FakeKanbanLeaf("ToDo General.md");
+
+		await makeNormalizer(vault, [other]).normalize(board);
+
+		expect(other.calls).toHaveLength(0);
+	});
+
+	it("does not refresh when there was no change to write", async () => {
+		const vault = new FakeVault();
+		const board = vault.addFile(
+			"ToDo Auto.md",
+			"## ToDo\n- [ ] already 📅 2026-06-20\n",
+		);
+		const leaf = new FakeKanbanLeaf("ToDo Auto.md");
+
+		await makeNormalizer(vault, [leaf]).normalize(board);
+
+		expect(leaf.calls).toHaveLength(0);
 	});
 });
