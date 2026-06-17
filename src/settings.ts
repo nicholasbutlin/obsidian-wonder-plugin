@@ -5,12 +5,14 @@ export interface WonderSettings {
 	dateFormat: string;
 	kanbanFile: string;
 	processRefreshInterval: number;
+	normalizeKanbanDates: boolean;
 }
 
 export const DEFAULT_SETTINGS: WonderSettings = {
 	dateFormat: "YYYY-MM-DD",
 	kanbanFile: "ToDo Auto",
 	processRefreshInterval: 10,
+	normalizeKanbanDates: true,
 };
 
 // The Kanban setting stores a vault-relative name without extension; the file
@@ -64,6 +66,32 @@ export class WonderSettingTab extends PluginSettingTab {
 				}
 			},
 		);
+
+		this.addToggleSetting(
+			"Normalize Kanban dates to 📅",
+			"Rewrite Kanban picker dates (@{YYYY-MM-DD}) to the Tasks emoji format on board files.",
+			this.plugin.settings.normalizeKanbanDates,
+			(value) => {
+				this.plugin.settings.normalizeKanbanDates = value;
+			},
+		);
+	}
+
+	private addToggleSetting(
+		name: string,
+		desc: string,
+		value: boolean,
+		apply: (value: boolean) => void,
+	) {
+		new Setting(this.containerEl)
+			.setName(name)
+			.setDesc(desc)
+			.addToggle((toggle) =>
+				toggle.setValue(value).onChange(async (value) => {
+					apply(value);
+					await this.plugin.saveSettings();
+				}),
+			);
 	}
 
 	private addTextSetting(

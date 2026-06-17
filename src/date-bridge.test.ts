@@ -1,0 +1,109 @@
+import { describe, it, expect } from "vitest";
+import { TFile } from "obsidian";
+import { normalizeKanbanDates, DateNormalizer } from "./date-bridge";
+
+describe("normalizeKanbanDates", () => {
+	it("converts a brace date to the Tasks due emoji", () => {
+		expect(normalizeKanbanDates("do thing @{2026-06-20}")).toBe(
+			"do thing 📅 2026-06-20",
+		);
+	});
+
+	it("drops the time component from brace date-times", () => {
+		expect(normalizeKanbanDates("@{2026-06-20 09:00}")).toBe("📅 2026-06-20");
+		expect(normalizeKanbanDates("@{2026-06-20T09:00}")).toBe("📅 2026-06-20");
+	});
+
+	it("leaves @[[date]] reference stamps untouched", () => {
+		expect(normalizeKanbanDates("done @[[2026-03-27]]")).toBe(
+			"done @[[2026-03-27]]",
+		);
+	});
+
+	it("converts only the brace date on a line that has both", () => {
+		expect(normalizeKanbanDates("task @[[2026-03-27]] @{2026-06-20}")).toBe(
+			"task @[[2026-03-27]] 📅 2026-06-20",
+		);
+	});
+
+	it("is idempotent", () => {
+		const once = normalizeKanbanDates("a @{2026-06-20} b @{2026-07-01}");
+		expect(normalizeKanbanDates(once)).toBe(once);
+	});
+
+	it("returns the input unchanged when there are no brace dates", () => {
+		const text = "# Notes\n- [ ] something 📅 2026-06-14 @[[2026-03-27]]\n";
+		expect(normalizeKanbanDates(text)).toBe(text);
+	});
+});
+
+// In-memory Vault stand-in with a write counter so we can assert the no-op guard.
+class FakeVault {
+	private contents = new Map<TFile, string>();
+	processCalls = 0;
+
+	addFile(path: string, content: string): TFile {
+		const file = new TFile();
+		file.path = path;
+		this.contents.set(file, content);
+		return file;
+	}
+
+	async read(file: TFile): Promise<string> {
+		return this.contents.get(file) ?? "";
+	}
+
+	async process(file: TFile, fn: (data: string) => string): Promise<string> {
+		this.processCalls++;
+		const next = fn(this.contents.get(file) ?? "");
+		this.contents.set(file, next);
+		return next;
+	}
+}
+
+function makeNormalizer(vault: FakeVault): DateNormalizer {
+	const plugin = { app: { vault } };
+	return new DateNormalizer(plugin as never);
+}
+
+describe("DateNormalizer.normalize", () => {
+	it("rewrites brace dates on a board file", async () => {
+		const vault = new FakeVault();
+		const board = vault.addFile(
+			"ToDo Auto.md",
+			"## ToDo\n- [ ] ship it @{2026-06-20}\n",
+		);
+
+		await makeNormalizer(vault).normalize(board);
+
+		expect(await vault.read(board)).toBe(
+			"## ToDo\n- [ ] ship it 📅 2026-06-20\n",
+		);
+	});
+
+	it("does not write when there is nothing to convert", async () => {
+		const vault = new FakeVault();
+		const board = vault.addFile(
+			"ToDo Auto.md",
+			"## ToDo\n- [ ] already 📅 2026-06-20 @[[2026-03-27]]\n",
+		);
+
+		await makeNormalizer(vault).normalize(board);
+
+		expect(vault.processCalls).toBe(0);
+	});
+
+	it("leaves the %% kanban:settings %% block untouched", async () => {
+		const vault = new FakeVault();
+		const settings =
+			'%% kanban:settings\n```\n{"kanban-plugin":"board"}\n```\n%%\n';
+		const board = vault.addFile(
+			"ToDo Auto.md",
+			`## ToDo\n- [ ] ship it @{2026-06-20}\n\n${settings}`,
+		);
+
+		await makeNormalizer(vault).normalize(board);
+
+		expect(await vault.read(board)).toContain(settings);
+	});
+});

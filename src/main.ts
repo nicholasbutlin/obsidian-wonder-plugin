@@ -1,11 +1,7 @@
 import { Editor, Plugin, TAbstractFile, TFile } from "obsidian";
-import {
-	WonderSettings,
-	DEFAULT_SETTINGS,
-	WonderSettingTab,
-	kanbanPath,
-} from "./settings";
+import { WonderSettings, DEFAULT_SETTINGS, WonderSettingTab } from "./settings";
 import { ActionProcessor } from "./action-processor";
+import { DateNormalizer } from "./date-bridge";
 
 // This is the main plugin class
 export default class WonderPlugin extends Plugin {
@@ -13,6 +9,7 @@ export default class WonderPlugin extends Plugin {
 	// constructor cannot initialize them.
 	settings!: WonderSettings;
 	actionProcessor!: ActionProcessor;
+	dateNormalizer!: DateNormalizer;
 
 	// Pending action scans, keyed by file path, so rapid edits to the same
 	// note collapse into a single scan once editing settles.
@@ -22,6 +19,7 @@ export default class WonderPlugin extends Plugin {
 		await this.loadSettings();
 
 		this.actionProcessor = new ActionProcessor(this);
+		this.dateNormalizer = new DateNormalizer(this);
 
 		this.registerEvent(
 			this.app.workspace.on("editor-menu", (menu, editor) => {
@@ -34,7 +32,7 @@ export default class WonderPlugin extends Plugin {
 		);
 
 		this.registerEvent(
-			this.app.vault.on("modify", (file) => this.scheduleActionScan(file)),
+			this.app.vault.on("modify", (file) => this.scheduleScan(file)),
 		);
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
@@ -53,27 +51,45 @@ export default class WonderPlugin extends Plugin {
 		this.scanTimers.clear();
 	}
 
-	// Scan modified notes for @action markers, but skip the Kanban file itself.
-	// Debounced per file so a burst of edits triggers only one scan once the
-	// file settles.
-	scheduleActionScan(file: TAbstractFile) {
-		if (
-			!(file instanceof TFile) ||
-			file.path === kanbanPath(this.settings.kanbanFile)
-		) {
-			return;
-		}
+	// Route a modified file by type: Kanban board files get their picker dates
+	// normalized to the Tasks emoji format; every other note is scanned for
+	// @action markers. Both paths are debounced per file so a burst of edits
+	// triggers only one run once the file settles.
+	scheduleScan(file: TAbstractFile) {
+		if (!(file instanceof TFile)) return;
 
-		const pending = this.scanTimers.get(file.path);
+		const run = this.isBoardFile(file)
+			? () =>
+					this.settings.normalizeKanbanDates &&
+					this.dateNormalizer.normalize(file)
+			: () => this.actionProcessor.processActionMarkers(file);
+
+		this.debounce(file.path, run);
+	}
+
+	// Board detection reads frontmatter from the metadata cache rather than the
+	// file, avoiding a second read. `kanban-plugin: board` is static frontmatter
+	// present since the board was created, so even a cache entry that lags this
+	// modify event still carries it.
+	private isBoardFile(file: TFile): boolean {
+		return (
+			this.app.metadataCache.getFileCache(file)?.frontmatter?.[
+				"kanban-plugin"
+			] === "board"
+		);
+	}
+
+	private debounce(path: string, fn: () => void) {
+		const pending = this.scanTimers.get(path);
 		if (pending) {
 			clearTimeout(pending);
 		}
 
 		this.scanTimers.set(
-			file.path,
+			path,
 			setTimeout(() => {
-				this.scanTimers.delete(file.path);
-				this.actionProcessor.processActionMarkers(file);
+				this.scanTimers.delete(path);
+				fn();
 			}, this.settings.processRefreshInterval * 1000),
 		);
 	}

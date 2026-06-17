@@ -13,7 +13,13 @@ export class Notice {
 	constructor(public message: string) {}
 }
 
-export class App {}
+export class App {
+	metadataCache = {
+		getFileCache(_file: TFile): unknown {
+			return null;
+		},
+	};
+}
 export class Editor {}
 export class Plugin {}
 export class PluginSettingTab {}
