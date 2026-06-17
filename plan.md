@@ -1,46 +1,48 @@
-# Plan — Wonder Phase 0 F0a: Kanban date normalizer
+# Plan — Wonder: Kanban ↔ Tasks date bridge
 
-Convert Kanban picker brace dates (`@{YYYY-MM-DD}`) to canonical Tasks
-`📅 YYYY-MM-DD` on board files. Leave `@[[YYYY-MM-DD]]` reference stamps alone.
-Verified against the live vault: date-only ISO picker, no time trigger, two
-boards (`ToDo Auto.md`, `ToDo General.md`), `link-date-to-daily-note: false`.
+## Phase 0 — COMPLETE (shipped through 1.4.1)
 
-## Action items
+**Approach A — `📅`-only canonical dates on board files.** Kanban's picker writes
+`@{}`; Wonder converts to a single canonical `📅` on the card's **main line**.
+Kanban displays + colours the `📅` natively (overdue red / soon orange). Editing
+is two-way: pick in Kanban → reconcile; edit `📅` from Tasks/Reminders → shown
+directly. See memory: `wonder-phase0-date-strategy`, `wonder-deploy-loop`.
 
-- [x] `src/task-format.ts` — `DUE_EMOJI`, `formatDue(date)` (single source of due token)
-- [x] `src/date-bridge.ts` — pure `normalizeKanbanDates(text)` + `DateNormalizer` class (uses `formatDue`)
-- [x] `src/date-bridge.test.ts` — pure-fn tests (#1–6) + class tests via FakeVault (#7–9)
-- [x] `src/settings.ts` — `normalizeKanbanDates: boolean` (default true) + `addToggleSetting` + toggle row
-- [x] `src/main.ts` — route by file type: board → normalize, note → action-scan; extract `debounce(path, fn)`
-- [x] `src/main.test.ts` — add `metadataCache` to mock; routing tests (board→normalize, note→scan); keep debounce tests
-- [x] `npm test` green (19 passed); `npm run build` clean; `npm run lint` clean
+### Shipped
+- 1.1.0 — convert `@{}` → `📅`; `normalizeKanbanDates` setting; board routing
+- 1.2.0 — reconcile a re-picked date to a single `📅` (drop the stale one)
+- 1.3.0 — lift the `📅` onto the card's main `- [ ]` line (multi-line cards)
+- 1.4.0 — re-render the open Kanban board after writing (`setViewData`)
+- 1.4.1 — **the fix that makes live picks convert**: route board-vs-note when the
+  debounce fires (cache settled), not at event time when a Kanban save has
+  invalidated the metadata cache and a board would mis-route to the action scan
 
-## F0a.1 — replace-on-repick (done)
+### Verified
+- 30 unit tests (pure transform + `DateNormalizer` + routing); build + lint clean
+- both boards healed to single main-line `📅`; live reconcile via modify
+- **PENDING user check:** live Kanban pick on 1.4.1 (BRAT) collapses within ~1–2s
 
-Kanban can't edit a 📅 it doesn't own, so re-picking inserts a fresh @{} beside
-the existing 📅. Without reconciliation that leaves two due dates. Fix: per-line,
-a picked brace date drops any stale 📅 on that line before converting → one
-canonical due date. Picker now works as a re-setter (opens blank; minor nit).
+## Next work
 
-- [x] line-by-line `reconcileLine`; strip stale 📅 only on lines with a new @{}
-- [x] tests: replace, line-scoped replace, idempotent-through-replace (22 passing)
-- [x] build + lint clean
+### Residual (small, optional)
+- [ ] **Footer placement (cosmetic):** Kanban `inline-metadata-position` defaults to
+  body; the "Move task data to card footer" toggle isn't persisting. Body is fine;
+  decide if footer is wanted, then make the toggle stick (or set the key directly).
+- [ ] **Picker opens blank** on re-pick (Kanban can't seed from a `📅`) — accepted
+  tradeoff of Approach A; revisit only if it becomes annoying.
+- [ ] **`@[[date]]` stamps:** Kanban treats these as its own date in daily-note-link
+  mode, so re-picking on such a card replaces the stamp. Watch if relying on them.
 
-## Remaining (manual / out of this slice)
+### Phase 1 — capture (from `_re/Wonder Plugin Plan.md`)
+- [ ] **F1:** `@action` emits a canonical Tasks line `- [ ] {text} ➕ {today} ^id`
+  (via `task-format`) so captured actions are real Tasks the board, Dataview, and
+  Remindian all see — instead of a plain bullet.
+- [ ] Grow `task-format.ts` into the full formatter: `done ✅`, priority `⏫`,
+  start `🛫`, `markDone`.
+- [ ] "Complete task here" command using `task-format.markDone` (writes `✅` so
+  Remindian + Kanban Done agree).
 
-- [ ] Released 1.1.0 (F0a). Decide: push + release F0a.1
-- [ ] Enable Kanban "Move task data to card footer" so 📅 renders on cards
-- [ ] Manual board check: reload plugin → re-pick a date → confirm single `📅`, Tasks clean
-- [ ] F0b spike (overdue colour pills) — separate slice
-
-## Test list (canon-tdd)
-
-1. `@{2026-06-20}` → `📅 2026-06-20`
-2. `@{2026-06-20 09:00}` / `@{2026-06-20T09:00}` → `📅 2026-06-20` (defensive; time dropped)
-3. `@[[2026-03-27]]` unchanged
-4. line with both → only brace converts
-5. idempotent
-6. no brace dates → identical string (drives no-op-write guard)
-7. `normalize()` writes converted content for a board file
-8. `normalize()` makes no write when nothing to convert (call counter)
-9. `%% kanban:settings %%` block round-trips untouched
+## Deploy loop (reference)
+code → push `main` → CI semantic-release → GitHub release (+ `versions.json`/
+manifest bump) → **BRAT "Check for updates"** → reload. Hot Reload is OFF.
+No manual file copying — BRAT owns the vault plugin folder.
