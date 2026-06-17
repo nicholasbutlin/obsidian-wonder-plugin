@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.0.0...1.1.0) (2026-06-17)
+
+
+### Features
+
+* normalize Kanban dates to Tasks emoji format ([2b38db9](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/2b38db994defa2cf767105521f85205151f50292))
+
 # 1.0.0 (2026-06-15)
 
 
