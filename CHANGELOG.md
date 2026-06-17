@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.2.0...1.3.0) (2026-06-17)
+
+
+### Features
+
+* place normalized Kanban dates on the card's main line ([3e9b084](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/3e9b084acedc9d45e9102ac2986b089bf310c192))
+
 # [1.2.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.1.0...1.2.0) (2026-06-17)
 
 
