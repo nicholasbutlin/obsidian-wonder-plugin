@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.1.0...1.2.0) (2026-06-17)
+
+
+### Features
+
+* reconcile re-picked Kanban dates to a single due date ([ef9c55f](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/ef9c55f683016a9445bc5c5da9bd8a7c217b0ba0))
+
 # [1.1.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.0.0...1.1.0) (2026-06-17)
 
 
