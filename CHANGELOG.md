@@ -1,3 +1,10 @@
+## [1.4.1](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.4.0...1.4.1) (2026-06-17)
+
+
+### Bug Fixes
+
+* route board vs note when the debounce fires, not at event time ([85e4a03](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/85e4a03db7821e43b376ef4bb775c93145f25512))
+
 # [1.4.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.3.0...1.4.0) (2026-06-17)
 
 
