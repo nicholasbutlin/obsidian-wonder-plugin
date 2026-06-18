@@ -1,7 +1,8 @@
-import { Editor, Plugin, TAbstractFile, TFile } from "obsidian";
+import { Editor, Notice, Plugin, TAbstractFile, TFile } from "obsidian";
 import { WonderSettings, DEFAULT_SETTINGS, WonderSettingTab } from "./settings";
 import { ActionProcessor } from "./action-processor";
 import { DateNormalizer } from "./date-bridge";
+import { buildContextBlock, upsertContextSection } from "./context-section";
 
 // This is the main plugin class
 export default class WonderPlugin extends Plugin {
@@ -42,6 +43,12 @@ export default class WonderPlugin extends Plugin {
 			this.app.vault.on("modify", (file) => this.scheduleScan(file)),
 		);
 
+		this.addCommand({
+			id: "refresh-context",
+			name: "Refresh Context section",
+			callback: () => this.refreshContext(),
+		});
+
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new WonderSettingTab(this.app, this));
 	}
@@ -49,6 +56,23 @@ export default class WonderPlugin extends Plugin {
 	insertDateHeading(editor: Editor) {
 		const date = window.moment().format(this.settings.dateFormat);
 		editor.replaceSelection(`# ${date}`);
+	}
+
+	// Insert or refresh the marked Context section at the bottom of the active
+	// note, leaving everything above it untouched.
+	async refreshContext() {
+		const file = this.app.workspace.getActiveFile();
+		if (!file) {
+			new Notice("Wonder: open a note to refresh its Context section.");
+			return;
+		}
+		const block = buildContextBlock(
+			this.settings.contextHeading,
+			this.settings.contextQuery,
+		);
+		await this.app.vault.process(file, (data) =>
+			upsertContextSection(data, block),
+		);
 	}
 
 	onunload() {

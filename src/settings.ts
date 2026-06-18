@@ -9,6 +9,9 @@ export interface WonderSettings {
 	dateDebounceSeconds: number;
 	actionDebounceSeconds: number;
 	normalizeKanbanDates: boolean;
+	// The "Refresh Context" command's heading and Tasks query (template string).
+	contextHeading: string;
+	contextQuery: string;
 }
 
 export const DEFAULT_SETTINGS: WonderSettings = {
@@ -17,6 +20,9 @@ export const DEFAULT_SETTINGS: WonderSettings = {
 	dateDebounceSeconds: 1,
 	actionDebounceSeconds: 10,
 	normalizeKanbanDates: true,
+	contextHeading: "Context",
+	contextQuery:
+		"not done\n(due before tomorrow) OR (happens today)\nsort by priority",
 };
 
 // The Kanban setting stores a vault-relative name without extension; the file
@@ -92,6 +98,47 @@ export class WonderSettingTab extends PluginSettingTab {
 				this.plugin.settings.normalizeKanbanDates = value;
 			},
 		);
+
+		this.addTextSetting(
+			"Context heading",
+			"Heading for the section the Refresh Context command maintains.",
+			DEFAULT_SETTINGS.contextHeading,
+			this.plugin.settings.contextHeading,
+			(value) => {
+				this.plugin.settings.contextHeading = value.trim() || "Context";
+			},
+		);
+
+		this.addTextAreaSetting(
+			"Context query",
+			"Tasks query placed in the Context section (one clause per line).",
+			DEFAULT_SETTINGS.contextQuery,
+			this.plugin.settings.contextQuery,
+			(value) => {
+				this.plugin.settings.contextQuery = value;
+			},
+		);
+	}
+
+	private addTextAreaSetting(
+		name: string,
+		desc: string,
+		placeholder: string,
+		value: string,
+		apply: (value: string) => void,
+	) {
+		new Setting(this.containerEl)
+			.setName(name)
+			.setDesc(desc)
+			.addTextArea((text) =>
+				text
+					.setPlaceholder(placeholder)
+					.setValue(value)
+					.onChange(async (value) => {
+						apply(value);
+						await this.plugin.saveSettings();
+					}),
+			);
 	}
 
 	private addToggleSetting(
