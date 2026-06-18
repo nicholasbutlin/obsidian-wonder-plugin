@@ -1,3 +1,11 @@
+# [1.5.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.4.1...1.5.0) (2026-06-18)
+
+
+### Features
+
+* capture [@action](https://github.com/action) as a canonical Tasks line on the board ([2b7ec26](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/2b7ec267b794790e8bc93f870c015ef88a54ec97))
+* separate date-reconcile and action-capture debounces ([f110f18](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/f110f18439c648343562658023f0f6b8c5f3885e))
+
 ## [1.4.1](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.4.0...1.4.1) (2026-06-17)
 
 
