@@ -128,19 +128,17 @@ class FakeVault {
 	}
 }
 
-// A stand-in for an open Kanban board view, recording setViewData calls.
+// A stand-in for an open Kanban board leaf, recording rebuildView calls.
 class FakeKanbanLeaf {
-	view: {
-		file: { path: string };
-		setViewData: (data: string, clear: boolean) => void;
-	};
-	calls: { data: string; clear: boolean }[] = [];
+	view: { file: { path: string } };
+	rebuilds = 0;
 
 	constructor(path: string) {
-		this.view = {
-			file: { path },
-			setViewData: (data, clear) => this.calls.push({ data, clear }),
-		};
+		this.view = { file: { path } };
+	}
+
+	rebuildView() {
+		this.rebuilds++;
 	}
 }
 
@@ -196,8 +194,8 @@ describe("DateNormalizer.normalize", () => {
 	});
 
 	// Obsidian won't push an external write into a focused board view, so after
-	// writing we re-feed the content to any open Kanban leaf for the file.
-	it("re-renders an open Kanban board showing the file", async () => {
+	// writing we rebuild any open Kanban leaf for the file (a disk reload).
+	it("rebuilds an open Kanban board showing the file", async () => {
 		const vault = new FakeVault();
 		const board = vault.addFile(
 			"ToDo Auto.md",
@@ -207,11 +205,10 @@ describe("DateNormalizer.normalize", () => {
 
 		await makeNormalizer(vault, [leaf]).normalize(board);
 
-		expect(leaf.calls).toHaveLength(1);
-		expect(leaf.calls[0].data).toContain("📅 2026-06-20");
+		expect(leaf.rebuilds).toBe(1);
 	});
 
-	it("does not refresh a Kanban board showing a different file", async () => {
+	it("does not rebuild a Kanban board showing a different file", async () => {
 		const vault = new FakeVault();
 		const board = vault.addFile(
 			"ToDo Auto.md",
@@ -221,10 +218,10 @@ describe("DateNormalizer.normalize", () => {
 
 		await makeNormalizer(vault, [other]).normalize(board);
 
-		expect(other.calls).toHaveLength(0);
+		expect(other.rebuilds).toBe(0);
 	});
 
-	it("does not refresh when there was no change to write", async () => {
+	it("does not rebuild when there was no change to write", async () => {
 		const vault = new FakeVault();
 		const board = vault.addFile(
 			"ToDo Auto.md",
@@ -234,6 +231,6 @@ describe("DateNormalizer.normalize", () => {
 
 		await makeNormalizer(vault, [leaf]).normalize(board);
 
-		expect(leaf.calls).toHaveLength(0);
+		expect(leaf.rebuilds).toBe(0);
 	});
 });

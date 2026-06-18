@@ -114,11 +114,9 @@ function lastMatch(text: string, pattern: RegExp): string | null {
 	return matches.length ? matches[matches.length - 1][1] : null;
 }
 
-// A Kanban board leaf's view, as much of it as we touch. Kanban's view extends
-// Obsidian's TextFileView, so `setViewData` is a stable re-render entry point.
-type BoardView = {
-	file?: { path: string };
-	setViewData?: (data: string, clear: boolean) => void;
+type BoardLeaf = {
+	view?: { file?: { path: string } };
+	rebuildView?: () => void;
 };
 
 export class DateNormalizer {
@@ -132,28 +130,24 @@ export class DateNormalizer {
 		// event recomputes an identical string and exits here without writing.
 		if (next === content) return;
 		await this.plugin.app.vault.process(file, () => next);
-		this.refreshOpenBoards(file, next);
+		this.refreshOpenBoards(file);
 	}
 
-	// Obsidian doesn't push an external write into a focused TextFileView, so a
-	// Kanban board open on this file keeps showing stale dates until it's
-	// re-activated. Re-feed the new content to any leaf displaying it so it
-	// re-renders in place. Best-effort: a Kanban internal change must never break
+	// Kanban reparses the board from the *view's* in-memory data, which Obsidian
+	// doesn't update on an external write — so a focused board keeps showing the
+	// stale Kanban date after we reconcile, until it's reloaded from disk. Rebuild
+	// the leaf (the programmatic equivalent of navigating away and back) so it
+	// re-reads the file. Best-effort: a Kanban/Obsidian internal must never break
 	// normalization.
-	private refreshOpenBoards(file: TFile, content: string): void {
+	private refreshOpenBoards(file: TFile): void {
 		const workspace = this.plugin.app.workspace;
 		if (!workspace?.getLeavesOfType) return;
-		for (const leaf of workspace.getLeavesOfType("kanban")) {
-			const view = leaf.view as BoardView;
-			if (
-				view?.file?.path === file.path &&
-				typeof view.setViewData === "function"
-			) {
-				try {
-					view.setViewData(content, true);
-				} catch {
-					// swallow: keep the canonical date even if the re-render fails
-				}
+		for (const leaf of workspace.getLeavesOfType("kanban") as BoardLeaf[]) {
+			if (leaf.view?.file?.path !== file.path) continue;
+			try {
+				leaf.rebuildView?.();
+			} catch {
+				// swallow: keep the canonical date even if the rebuild fails
 			}
 		}
 	}
