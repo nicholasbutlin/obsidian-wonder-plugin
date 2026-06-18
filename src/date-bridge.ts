@@ -26,6 +26,9 @@ const DUE_DATE = new RegExp(`${DUE_EMOJI} (\\d{4}-\\d{2}-\\d{2})`, "g");
 // Cheap, stateless presence check (no `g` flag, so safe for `.test()`).
 const HAS_BRACE = /@\{\d{4}-\d{2}-\d{2}/;
 
+// A due date that is the very last token on a line.
+const DUE_AT_END = new RegExp(`${DUE_EMOJI} \\d{4}-\\d{2}-\\d{2}$`);
+
 // A board card is a top-level list item; its continuation lines are indented or
 // blank. Headings, the settings block, and thematic breaks end a card.
 const CARD_START = /^[-*] /;
@@ -60,9 +63,15 @@ export function normalizeKanbanDates(text: string): string {
 
 // Lift a card's due date onto its main line: a freshly-picked brace date wins
 // over any existing 📅; otherwise an already-present 📅 that has drifted onto a
-// continuation line is moved up. A card whose single 📅 already sits on the main
-// line is left exactly as-is.
+// continuation line is moved up.
+//
+// Multi-line caveat: Kanban only displays a card date that ends strictly before
+// the card's first newline, so a date that is the last token on the main line
+// (flush against the newline) is silently dropped. We give it a trailing space.
+// "Multi-line" means a continuation line with actual content — a trailing blank
+// line (from the file's final newline) is not Kanban content and doesn't count.
 function reconcileCard(card: string[]): string[] {
+	const multiline = card.slice(1).some((line) => line.trim() !== "");
 	const braceDate = lastMatch(card.join("\n"), KANBAN_BRACE_DATE);
 	const dueLines: { index: number; date: string }[] = [];
 	card.forEach((line, index) => {
@@ -72,14 +81,22 @@ function reconcileCard(card: string[]): string[] {
 
 	if (!braceDate) {
 		if (dueLines.length === 0) return card; // no dates at all
-		if (dueLines.length === 1 && dueLines[0].index === 0) return card; // already canonical
+		// Already canonical (one 📅 on the main line). Leave it — except heal the
+		// case Kanban mis-renders: a multi-line date flush against the newline.
+		if (dueLines.length === 1 && dueLines[0].index === 0) {
+			if (multiline && DUE_AT_END.test(card[0])) {
+				return [`${card[0]} `, ...card.slice(1)];
+			}
+			return card;
+		}
 	}
 
 	const due = braceDate ?? dueLines[dueLines.length - 1].date;
 	const stripped = card.map((line) =>
 		line.replace(BRACE_STRIP, "").replace(DUE_STRIP, ""),
 	);
-	stripped[0] = `${stripped[0].replace(/[ \t]+$/, "")} ${formatDue(due)}`;
+	const tail = multiline ? " " : "";
+	stripped[0] = `${stripped[0].replace(/[ \t]+$/, "")} ${formatDue(due)}${tail}`;
 	return stripped;
 }
 

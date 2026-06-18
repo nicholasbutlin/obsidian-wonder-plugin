@@ -62,28 +62,45 @@ describe("normalizeKanbanDates", () => {
 
 	// Tasks reads the date on a card's main `- [ ]` line, and Kanban only renders
 	// inline metadata there too. A picker date that lands on an indented
-	// continuation line must be lifted to the card's main line.
-	it("lifts a converted date from a continuation line to the card's main line", () => {
+	// continuation line must be lifted to the card's main line. On a multi-line
+	// card the lifted date ends in a trailing space: Kanban only displays a date
+	// that ends strictly before the card's first newline, so a date sitting flush
+	// against the newline (the last token) would be silently dropped.
+	it("lifts a converted date to the main line with a trailing space (multi-line)", () => {
 		expect(
 			normalizeKanbanDates("- [ ] Policies:\n\tdetail @{2026-06-20}"),
-		).toBe("- [ ] Policies: 📅 2026-06-20\n\tdetail");
+		).toBe("- [ ] Policies: 📅 2026-06-20 \n\tdetail");
 	});
 
 	it("heals an existing 📅 stranded on a continuation line (no brace)", () => {
 		expect(
 			normalizeKanbanDates("- [ ] Strategy\n\t[[Plan review]] 📅 2026-06-18"),
-		).toBe("- [ ] Strategy 📅 2026-06-18\n\t[[Plan review]]");
+		).toBe("- [ ] Strategy 📅 2026-06-18 \n\t[[Plan review]]");
 	});
 
-	it("leaves a card whose 📅 is already on the main line untouched", () => {
-		const text = "- [ ] a 📅 2026-06-30\n\tsome detail";
+	it("heals a multi-line card whose main-line date is flush against the newline", () => {
+		expect(normalizeKanbanDates("- [ ] a 📅 2026-06-30\n\tsome detail")).toBe(
+			"- [ ] a 📅 2026-06-30 \n\tsome detail",
+		);
+	});
+
+	it("leaves a multi-line date alone when it is already followed by content", () => {
+		// The date isn't the last token, so Kanban renders it — no space needed,
+		// and we must not reorder the line.
+		const text = "- [ ] a 📅 2026-06-30 #tag\n\tsome detail";
 		expect(normalizeKanbanDates(text)).toBe(text);
+	});
+
+	it("adds no trailing space on a single-line card", () => {
+		expect(normalizeKanbanDates("- [ ] task @{2026-07-15}")).toBe(
+			"- [ ] task 📅 2026-07-15",
+		);
 	});
 
 	it("replaces and lifts on a re-picked multi-line card", () => {
 		expect(
 			normalizeKanbanDates("- [ ] task 📅 2026-01-01\n\tnote @{2026-07-15}"),
-		).toBe("- [ ] task 📅 2026-07-15\n\tnote");
+		).toBe("- [ ] task 📅 2026-07-15 \n\tnote");
 	});
 });
 
