@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.5.3...1.6.0) (2026-06-18)
+
+
+### Features
+
+* add Refresh Context command for the daily note (F3) ([8922431](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/892243113be327a858f84411ef4dd5dcce115340))
+
 ## [1.5.3](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.5.2...1.5.3) (2026-06-18)
 
 

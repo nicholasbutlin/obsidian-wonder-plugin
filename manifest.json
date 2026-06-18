@@ -1,7 +1,7 @@
 {
 	"id": "obsidian-wonder-plugin",
 	"name": "Wonder Plugin",
-	"version": "1.5.3",
+	"version": "1.6.0",
 	"minAppVersion": "1.2.0",
 	"description": "Hoping to do some wonderful things with Obsidian",
 	"author": "Nick Butlin",
