@@ -25,21 +25,19 @@ hexagonal (pure domain vs Obsidian adapters), DRY, atomic writes, DDD naming.
 - **Application (`main.ts`):** event → debounced `ChangeRouter` → use-cases,
   with adapters injected.
 
-## Sequence (small safe steps, TDD)
+## Sequence (small safe steps, TDD) — ALL DONE on branch (41 tests)
 
-1. **task-format vocabulary** — add `CREATED_EMOJI`/`DONE_EMOJI`,
-   `formatCreated`/`formatDone`, `newTask({text, created, blockId})`. Pure. ← step 1
-2. **F1 capture format** — board entry becomes `- [ ] {text} ➕ {today} ^id`
-   (canonical Tasks line) via `newTask`; inject a `today` clock into the capture.
-   In-note ACTION link unchanged.
-3. **Separate debounces** — date reconcile (fast, ~1s) vs action capture (slower,
-   ~10s, so it doesn't fire mid-typing). Two named settings. Choose interval at
-   schedule time via a `BoardRegistry` (seeded from metadataCache at load,
-   updated at fire time) so it's reliable despite Kanban's cache invalidation;
-   routing stays at fire time.
-4. **Hexagonal extraction** — split `action-processor.ts` into pure
-   `action-capture.ts` + thin Obsidian adapter; introduce the ports above; DRY
-   the debounce/guard/read patterns. Refactor under green tests.
+1. [x] **task-format vocabulary** — `formatCreated`/`formatDone`/`newTask` (pure)
+2. [x] **F1 capture format** — board entry is `- [ ] {text} ➕ {today} ^id` via
+   `newTask`; injected `today` clock; in-note ACTION link unchanged
+3. [x] **Separate debounces** — date reconcile (default 1s) vs action capture
+   (default 10s); interval chosen via a board registry (seeded at layout-ready)
+   so it's reliable despite Kanban's cache invalidation; routing stays at fire
+   time; legacy `processRefreshInterval` migrated to the action delay
+4. [x] **Pragmatic hexagonal** — pure `action-capture.ts` (grammar + transform)
+   extracted; `action-processor.ts` is now a thin Obsidian adapter
+
+Pending: merge `feat/phase1-action-capture` → `main` + release (needs go).
 
 ## Then (Phase 0 follow-up)
 - Investigate intermittent date conversion on live Kanban edits (suspect another
