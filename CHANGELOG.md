@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.5.0...1.5.1) (2026-06-18)
+
+
+### Bug Fixes
+
+* keep a trailing space after a multi-line card's date so Kanban renders it ([402e385](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/402e385029ef9a4bc560a26ee0dd36c0fb779a2f))
+
 # [1.5.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.4.1...1.5.0) (2026-06-18)
 
 
