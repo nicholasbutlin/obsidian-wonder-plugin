@@ -1,6 +1,7 @@
 import { App, Notice, TFile } from "obsidian";
 import WonderPlugin from "./main";
 import { kanbanPath } from "./settings";
+import { newTask } from "./task-format";
 
 // Action grammar lives here so the marker syntax has a single definition.
 // `ACTION_GUARD` is a cheap, stateless check; `ACTION_MARKER` is the global
@@ -15,20 +16,27 @@ function randomBlockId(): string {
 	return Math.random().toString(36).substring(2, 9);
 }
 
+function todayIso(): string {
+	return window.moment().format("YYYY-MM-DD");
+}
+
 export class ActionProcessor {
 	plugin: WonderPlugin;
 	app: App;
 
-	// Injectable so tests can assert against deterministic anchor IDs.
+	// Injectable so tests can assert against deterministic anchor IDs and date.
 	private generateBlockId: () => string;
+	private today: () => string;
 
 	constructor(
 		plugin: WonderPlugin,
 		generateBlockId: () => string = randomBlockId,
+		today: () => string = todayIso,
 	) {
 		this.plugin = plugin;
 		this.app = plugin.app;
 		this.generateBlockId = generateBlockId;
+		this.today = today;
 	}
 
 	async processActionMarkers(file: TFile) {
@@ -62,8 +70,15 @@ export class ActionProcessor {
 				const actionText = rawText.trim();
 				const blockId = this.generateBlockId();
 
-				// Anchor the Kanban item with the same block ID the ACTION link targets.
-				kanbanEntries.push(`- ${actionText} ^${blockId}\n[[${file.basename}]]`);
+				// File a canonical Tasks line (checkbox + created stamp) anchored with
+				// the same block ID the ACTION link targets, so the captured action is
+				// a real Task that Dataview and Remindian see — backlinked to the note.
+				const task = newTask({
+					text: actionText,
+					created: this.today(),
+					blockId,
+				});
+				kanbanEntries.push(`${task}\n[[${file.basename}]]`);
 				new Notice(`Adding auto action: ${actionText}`);
 
 				return `**[[${kanbanFile}#^${blockId}|ACTION]]:** ${actionText}`;

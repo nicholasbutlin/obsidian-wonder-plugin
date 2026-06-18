@@ -1,48 +1,52 @@
-# Plan — Wonder: Kanban ↔ Tasks date bridge
+# Plan — Phase 1: action capture + hardening
 
-## Phase 0 — COMPLETE (shipped through 1.4.1)
+Branch: `feat/phase1-action-capture`. Phase 0 (date bridge) is shipped through
+1.4.1 on `main`; revisit the intermittent date behaviour AFTER Phase 1.
 
-**Approach A — `📅`-only canonical dates on board files.** Kanban's picker writes
-`@{}`; Wonder converts to a single canonical `📅` on the card's **main line**.
-Kanban displays + colours the `📅` natively (overdue red / soon orange). Editing
-is two-way: pick in Kanban → reconcile; edit `📅` from Tasks/Reminders → shown
-directly. See memory: `wonder-phase0-date-strategy`, `wonder-deploy-loop`.
+## Goal
 
-### Shipped
-- 1.1.0 — convert `@{}` → `📅`; `normalizeKanbanDates` setting; board routing
-- 1.2.0 — reconcile a re-picked date to a single `📅` (drop the stale one)
-- 1.3.0 — lift the `📅` onto the card's main `- [ ]` line (multi-line cards)
-- 1.4.0 — re-render the open Kanban board after writing (`setViewData`)
-- 1.4.1 — **the fix that makes live picks convert**: route board-vs-note when the
-  debounce fires (cache settled), not at event time when a Kanban save has
-  invalidated the metadata cache and a board would mis-route to the action scan
+`@action` capture should produce real Tasks the board, Dataview, and Remindian
+all see, and the tool should be hardened to the `/software-workflow` principles:
+hexagonal (pure domain vs Obsidian adapters), DRY, atomic writes, DDD naming.
 
-### Verified
-- 30 unit tests (pure transform + `DateNormalizer` + routing); build + lint clean
-- both boards healed to single main-line `📅`; live reconcile via modify
-- **PENDING user check:** live Kanban pick on 1.4.1 (BRAT) collapses within ~1–2s
+## Target architecture (pragmatic hexagonal — not a cathedral)
 
-## Next work
+- **Domain (pure, no `obsidian` import):**
+  - `task-format.ts` — the Tasks emoji vocabulary (value object): `formatDue`,
+    `formatCreated`, `formatDone`, `newTask`, `markDone`.
+  - `action-capture.ts` — pure: given note text → rewritten text + the captured
+    actions `[{text, blockId}]`. (extracted from `action-processor.ts`)
+  - `date-bridge.ts` — pure `normalizeKanbanDates` (already).
+- **Ports (interfaces):** `NoteGateway` (read/process), `BoardGateway` (locate
+  board, file entries), `Clock` (`today()`), `IdFactory` (`newBlockId()`),
+  `Notifier`, `BoardViewRefresher`.
+- **Adapters (Obsidian):** thin implementations over `vault`, `metadataCache`,
+  `Notice`, `workspace`.
+- **Application (`main.ts`):** event → debounced `ChangeRouter` → use-cases,
+  with adapters injected.
 
-### Residual (small, optional)
-- [ ] **Footer placement (cosmetic):** Kanban `inline-metadata-position` defaults to
-  body; the "Move task data to card footer" toggle isn't persisting. Body is fine;
-  decide if footer is wanted, then make the toggle stick (or set the key directly).
-- [ ] **Picker opens blank** on re-pick (Kanban can't seed from a `📅`) — accepted
-  tradeoff of Approach A; revisit only if it becomes annoying.
-- [ ] **`@[[date]]` stamps:** Kanban treats these as its own date in daily-note-link
-  mode, so re-picking on such a card replaces the stamp. Watch if relying on them.
+## Sequence (small safe steps, TDD)
 
-### Phase 1 — capture (from `_re/Wonder Plugin Plan.md`)
-- [ ] **F1:** `@action` emits a canonical Tasks line `- [ ] {text} ➕ {today} ^id`
-  (via `task-format`) so captured actions are real Tasks the board, Dataview, and
-  Remindian all see — instead of a plain bullet.
-- [ ] Grow `task-format.ts` into the full formatter: `done ✅`, priority `⏫`,
-  start `🛫`, `markDone`.
-- [ ] "Complete task here" command using `task-format.markDone` (writes `✅` so
-  Remindian + Kanban Done agree).
+1. **task-format vocabulary** — add `CREATED_EMOJI`/`DONE_EMOJI`,
+   `formatCreated`/`formatDone`, `newTask({text, created, blockId})`. Pure. ← step 1
+2. **F1 capture format** — board entry becomes `- [ ] {text} ➕ {today} ^id`
+   (canonical Tasks line) via `newTask`; inject a `today` clock into the capture.
+   In-note ACTION link unchanged.
+3. **Separate debounces** — date reconcile (fast, ~1s) vs action capture (slower,
+   ~10s, so it doesn't fire mid-typing). Two named settings. Choose interval at
+   schedule time via a `BoardRegistry` (seeded from metadataCache at load,
+   updated at fire time) so it's reliable despite Kanban's cache invalidation;
+   routing stays at fire time.
+4. **Hexagonal extraction** — split `action-processor.ts` into pure
+   `action-capture.ts` + thin Obsidian adapter; introduce the ports above; DRY
+   the debounce/guard/read patterns. Refactor under green tests.
 
-## Deploy loop (reference)
-code → push `main` → CI semantic-release → GitHub release (+ `versions.json`/
-manifest bump) → **BRAT "Check for updates"** → reload. Hot Reload is OFF.
-No manual file copying — BRAT owns the vault plugin folder.
+## Then (Phase 0 follow-up)
+- Investigate intermittent date conversion on live Kanban edits (suspect another
+  timing/refresh edge, distinct from the 1.4.1 routing fix).
+- "Complete task here" command using `task-format.markDone` (writes `✅`).
+
+## Deploy loop
+push `main` → CI semantic-release → release → BRAT "Check for updates" → reload.
+This branch merges to `main` when a coherent slice is ready (avoid half-baked
+releases).

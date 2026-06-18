@@ -41,9 +41,13 @@ function makeProcessor(vault: FakeVault): ActionProcessor {
 		app: { vault },
 		settings: { kanbanFile: "ToDo Auto" },
 	};
-	// Deterministic, unique anchor IDs keep assertions stable across runs.
+	// Deterministic anchor IDs and a fixed "today" keep assertions stable.
 	let counter = 0;
-	return new ActionProcessor(plugin as never, () => `id${counter++}`);
+	return new ActionProcessor(
+		plugin as never,
+		() => `id${counter++}`,
+		() => "2026-06-18",
+	);
 }
 
 describe("ActionProcessor.processActionMarkers", () => {
@@ -66,9 +70,9 @@ describe("ActionProcessor.processActionMarkers", () => {
 		expect(noteOut).toContain("|ACTION]]:** email Alice");
 		expect(noteOut).not.toContain("@action");
 
-		// Both actions are added to the Kanban file, backlinked to the note.
-		expect(kanbanOut).toContain("- call Bob ");
-		expect(kanbanOut).toContain("- email Alice ");
+		// Both actions are filed as canonical Tasks lines, backlinked to the note.
+		expect(kanbanOut).toContain("- [ ] call Bob ➕ 2026-06-18 ^");
+		expect(kanbanOut).toContain("- [ ] email Alice ➕ 2026-06-18 ^");
 		expect(kanbanOut).toContain("[[Note]]");
 
 		// Every ACTION link in the note resolves to an anchor in the Kanban file.
