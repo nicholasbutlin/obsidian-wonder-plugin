@@ -1,3 +1,10 @@
+## [1.5.2](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.5.1...1.5.2) (2026-06-18)
+
+
+### Bug Fixes
+
+* rebuild the Kanban leaf after reconcile so the stale date clears ([22e545e](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/22e545e480ad06da1b7c5d33ebdb5876d655377e))
+
 ## [1.5.1](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.5.0...1.5.1) (2026-06-18)
 
 
