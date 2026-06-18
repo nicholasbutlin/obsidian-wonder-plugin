@@ -1,3 +1,10 @@
+## [1.5.3](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.5.2...1.5.3) (2026-06-18)
+
+
+### Bug Fixes
+
+* refresh Kanban board without rebuildView (which blanked the board) ([ebef4a7](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/ebef4a743f08febdac91abd9c2dc0f9c7fb572b5))
+
 ## [1.5.2](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.5.1...1.5.2) (2026-06-18)
 
 
