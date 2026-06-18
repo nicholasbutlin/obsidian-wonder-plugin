@@ -19,7 +19,8 @@ function makePlugin(options: { boardPaths?: string[] } = {}) {
 
 	(plugin as unknown as { settings: unknown }).settings = {
 		kanbanFile: "ToDo Auto",
-		processRefreshInterval: 10,
+		dateDebounceSeconds: 1,
+		actionDebounceSeconds: 10,
 		dateFormat: "YYYY-MM-DD",
 		normalizeKanbanDates: true,
 	};
@@ -106,6 +107,22 @@ describe("WonderPlugin.scheduleScan", () => {
 		vi.advanceTimersByTime(10_000);
 
 		expect(normalizes).toHaveLength(0);
+	});
+
+	it("reconciles board dates on the fast interval and captures actions on the slow one", () => {
+		const { plugin, scans, normalizes } = makePlugin({
+			boardPaths: ["ToDo Auto.md"],
+		});
+
+		plugin.scheduleScan(makeTFile("ToDo Auto.md", "ToDo Auto")); // date: 1s
+		plugin.scheduleScan(makeTFile("Note.md", "Note")); // action: 10s
+
+		vi.advanceTimersByTime(1000);
+		expect(normalizes).toHaveLength(1); // board reconciled fast
+		expect(scans).toHaveLength(0); // action capture still waiting
+
+		vi.advanceTimersByTime(9000);
+		expect(scans).toHaveLength(1); // action captured after its longer delay
 	});
 
 	it("decides board-vs-note when the debounce fires, not when the event does", () => {

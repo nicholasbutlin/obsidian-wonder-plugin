@@ -4,14 +4,18 @@ import WonderPlugin from "./main";
 export interface WonderSettings {
 	dateFormat: string;
 	kanbanFile: string;
-	processRefreshInterval: number;
+	// Date reconcile is debounced briefly so the board settles quickly after a
+	// picker edit; action capture waits longer so it doesn't fire mid-typing.
+	dateDebounceSeconds: number;
+	actionDebounceSeconds: number;
 	normalizeKanbanDates: boolean;
 }
 
 export const DEFAULT_SETTINGS: WonderSettings = {
 	dateFormat: "YYYY-MM-DD",
 	kanbanFile: "ToDo Auto",
-	processRefreshInterval: 10,
+	dateDebounceSeconds: 1,
+	actionDebounceSeconds: 10,
 	normalizeKanbanDates: true,
 };
 
@@ -55,14 +59,27 @@ export class WonderSettingTab extends PluginSettingTab {
 		);
 
 		this.addTextSetting(
-			"Process Refresh Interval (seconds)",
-			"Interval in seconds to wait before processing modified files.",
-			DEFAULT_SETTINGS.processRefreshInterval.toString(),
-			this.plugin.settings.processRefreshInterval.toString(),
+			"Date reconcile delay (seconds)",
+			"How long to wait after a board edit before normalizing Kanban dates.",
+			DEFAULT_SETTINGS.dateDebounceSeconds.toString(),
+			this.plugin.settings.dateDebounceSeconds.toString(),
 			(value) => {
 				const interval = parseInt(value, 10);
 				if (!isNaN(interval) && interval > 0) {
-					this.plugin.settings.processRefreshInterval = interval;
+					this.plugin.settings.dateDebounceSeconds = interval;
+				}
+			},
+		);
+
+		this.addTextSetting(
+			"Action capture delay (seconds)",
+			"How long to wait after a note edit before capturing @action markers.",
+			DEFAULT_SETTINGS.actionDebounceSeconds.toString(),
+			this.plugin.settings.actionDebounceSeconds.toString(),
+			(value) => {
+				const interval = parseInt(value, 10);
+				if (!isNaN(interval) && interval > 0) {
+					this.plugin.settings.actionDebounceSeconds = interval;
 				}
 			},
 		);

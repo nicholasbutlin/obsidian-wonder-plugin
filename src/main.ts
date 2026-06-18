@@ -11,15 +11,22 @@ export default class WonderPlugin extends Plugin {
 	actionProcessor!: ActionProcessor;
 	dateNormalizer!: DateNormalizer;
 
-	// Pending action scans, keyed by file path, so rapid edits to the same
-	// note collapse into a single scan once editing settles.
+	// Pending scans, keyed by file path, so rapid edits to the same file
+	// collapse into a single run once editing settles.
 	private scanTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+	// Paths known to be Kanban boards. Seeded at load and updated as files are
+	// scanned, so the right debounce can be chosen at schedule time even when a
+	// Kanban save has momentarily invalidated the metadata cache.
+	private knownBoards = new Set<string>();
 
 	async onload() {
 		await this.loadSettings();
 
 		this.actionProcessor = new ActionProcessor(this);
 		this.dateNormalizer = new DateNormalizer(this);
+
+		this.app.workspace.onLayoutReady(() => this.indexBoards());
 
 		this.registerEvent(
 			this.app.workspace.on("editor-menu", (menu, editor) => {
@@ -59,17 +66,40 @@ export default class WonderPlugin extends Plugin {
 	// settled and `isBoardFile` is reliable.
 	scheduleScan(file: TAbstractFile) {
 		if (!(file instanceof TFile)) return;
-		this.debounce(file.path, () => this.scan(file));
+		this.debounce(
+			file.path,
+			() => this.scan(file),
+			this.debounceSecondsFor(file),
+		);
+	}
+
+	// Date reconcile is debounced briefly so a board settles fast; action capture
+	// waits longer so it doesn't fire mid-typing. The board check here is
+	// best-effort (it only picks the interval); the authoritative routing happens
+	// in scan() once the cache has settled.
+	private debounceSecondsFor(file: TFile): number {
+		const isBoard = this.knownBoards.has(file.path) || this.isBoardFile(file);
+		return isBoard
+			? this.settings.dateDebounceSeconds
+			: this.settings.actionDebounceSeconds;
 	}
 
 	// Route a settled file: Kanban board files get their picker dates normalized
 	// to the Tasks emoji format; every other note is scanned for @action markers.
 	private scan(file: TFile) {
 		if (this.isBoardFile(file)) {
+			this.knownBoards.add(file.path);
 			if (this.settings.normalizeKanbanDates)
 				this.dateNormalizer.normalize(file);
 		} else {
+			this.knownBoards.delete(file.path);
 			this.actionProcessor.processActionMarkers(file);
+		}
+	}
+
+	private indexBoards() {
+		for (const file of this.app.vault.getMarkdownFiles()) {
+			if (this.isBoardFile(file)) this.knownBoards.add(file.path);
 		}
 	}
 
@@ -81,7 +111,7 @@ export default class WonderPlugin extends Plugin {
 		);
 	}
 
-	private debounce(path: string, fn: () => void) {
+	private debounce(path: string, fn: () => void, seconds: number) {
 		const pending = this.scanTimers.get(path);
 		if (pending) {
 			clearTimeout(pending);
@@ -92,12 +122,19 @@ export default class WonderPlugin extends Plugin {
 			setTimeout(() => {
 				this.scanTimers.delete(path);
 				fn();
-			}, this.settings.processRefreshInterval * 1000),
+			}, seconds * 1000),
 		);
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const data = await this.loadData();
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+		// Migrate the old single interval: it governed action capture.
+		const legacy = (data as { processRefreshInterval?: number })
+			?.processRefreshInterval;
+		if (legacy != null && data?.actionDebounceSeconds == null) {
+			this.settings.actionDebounceSeconds = legacy;
+		}
 	}
 
 	async saveSettings() {
