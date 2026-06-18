@@ -1,16 +1,13 @@
 import { App, Notice, TFile } from "obsidian";
 import WonderPlugin from "./main";
 import { kanbanPath } from "./settings";
-import { newTask } from "./task-format";
-
-// Action grammar lives here so the marker syntax has a single definition.
-// `ACTION_GUARD` is a cheap, stateless check; `ACTION_MARKER` is the global
-// matcher used to rewrite every occurrence in one pass.
-const ACTION_GUARD = /@action:? /i;
-const ACTION_MARKER = /@action:? (.*)/gi;
-
-// New items are filed directly beneath the "## ToDo" heading.
-const TODO_HEADER = /(##\s+ToDo\s*\n)/;
+import {
+	captureActions,
+	hasActions,
+	hasTodoHeading,
+	insertUnderTodoHeading,
+	type CapturedAction,
+} from "./action-capture";
 
 function randomBlockId(): string {
 	return Math.random().toString(36).substring(2, 9);
@@ -20,6 +17,8 @@ function todayIso(): string {
 	return window.moment().format("YYYY-MM-DD");
 }
 
+// Obsidian adapter around the pure action-capture domain: reads the note and
+// board, applies the transform atomically, and files the captured tasks.
 export class ActionProcessor {
 	plugin: WonderPlugin;
 	app: App;
@@ -42,7 +41,7 @@ export class ActionProcessor {
 	async processActionMarkers(file: TFile) {
 		// Cheap guard so we don't touch notes that have nothing to do.
 		const content = await this.app.vault.read(file);
-		if (!ACTION_GUARD.test(content)) return;
+		if (!hasActions(content)) return;
 
 		const { kanbanFile } = this.plugin.settings;
 		const kanban = this.app.vault.getAbstractFileByPath(kanbanPath(kanbanFile));
@@ -52,44 +51,38 @@ export class ActionProcessor {
 		// file the actions, and rewriting the note anyway would leave it linking
 		// to Kanban anchors that never get created.
 		const kanbanContent = await this.app.vault.read(kanban);
-		if (!TODO_HEADER.test(kanbanContent)) {
+		if (!hasTodoHeading(kanbanContent)) {
 			new Notice(
 				`Wonder: "${kanbanFile}" has no "## ToDo" heading; skipped action processing.`,
 			);
 			return;
 		}
 
-		const kanbanEntries: string[] = [];
+		// vault.process reads, transforms, and writes atomically, so we capture
+		// from the data it hands us rather than a stale read.
+		let captured: CapturedAction[] = [];
+		await this.app.vault.process(file, (data) => {
+			const result = captureActions(data, {
+				kanbanFile,
+				noteBasename: file.basename,
+				today: this.today,
+				newBlockId: this.generateBlockId,
+			});
+			captured = result.captured;
+			return result.rewritten;
+		});
 
-		// vault.process reads, transforms, and writes atomically, so we compute
-		// the rewrite from the data it hands us rather than a stale read. A
-		// replacer function (not a replacement string) keeps `$` in action text
-		// literal instead of triggering substitution patterns.
-		await this.app.vault.process(file, (data) =>
-			data.replace(ACTION_MARKER, (_match, rawText: string) => {
-				const actionText = rawText.trim();
-				const blockId = this.generateBlockId();
+		if (captured.length === 0) return;
 
-				// File a canonical Tasks line (checkbox + created stamp) anchored with
-				// the same block ID the ACTION link targets, so the captured action is
-				// a real Task that Dataview and Remindian see — backlinked to the note.
-				const task = newTask({
-					text: actionText,
-					created: this.today(),
-					blockId,
-				});
-				kanbanEntries.push(`${task}\n[[${file.basename}]]`);
-				new Notice(`Adding auto action: ${actionText}`);
+		for (const action of captured) {
+			new Notice(`Adding auto action: ${action.text}`);
+		}
 
-				return `**[[${kanbanFile}#^${blockId}|ACTION]]:** ${actionText}`;
-			}),
-		);
-
-		if (kanbanEntries.length === 0) return;
-
-		// Insert the new action items after the "## ToDo" header.
 		await this.app.vault.process(kanban, (data) =>
-			data.replace(TODO_HEADER, `$1${kanbanEntries.join("\n")}\n`),
+			insertUnderTodoHeading(
+				data,
+				captured.map((action) => action.entry),
+			),
 		);
 	}
 }
