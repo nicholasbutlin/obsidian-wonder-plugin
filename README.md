@@ -25,16 +25,14 @@ Write an action inline in any note:
 Shortly after you stop typing, the plugin:
 
 1. Rewrites the marker in place as a link back to the Kanban file:
-   `**[[ToDo Auto#^a1b2c3d|ACTION]]:** follow up with Sam about the budget`
+   `**[[ToDo Auto#ToDo|ACTION]]:** follow up with Sam about the budget`
 2. Appends the action under the `## ToDo` heading of your Kanban note, with a
-   backlink to the source note and a matching block anchor so the `ACTION`
-   link resolves:
+   backlink to the source note:
 
    ```md
    ## ToDo
 
-   - follow up with Sam about the budget ^a1b2c3d
-     [[My Note]]
+   - [ ] follow up with Sam about the budget [[My Note]] <!-- ➕ 2026-06-18 -->
    ```
 
 Both `@action` and `@action:` are recognised, and every marker in a note is

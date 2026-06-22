@@ -41,17 +41,12 @@ function makeProcessor(vault: FakeVault): ActionProcessor {
 		app: { vault },
 		settings: { kanbanFile: "ToDo Auto" },
 	};
-	// Deterministic anchor IDs and a fixed "today" keep assertions stable.
-	let counter = 0;
-	return new ActionProcessor(
-		plugin as never,
-		() => `id${counter++}`,
-		() => "2026-06-18",
-	);
+	// A fixed "today" keeps assertions stable.
+	return new ActionProcessor(plugin as never, () => "2026-06-18");
 }
 
 describe("ActionProcessor.processActionMarkers", () => {
-	it("processes every @action marker and links each to a unique anchor", async () => {
+	it("processes every @action marker and links each to the board ToDo heading", async () => {
 		const vault = new FakeVault();
 		const note = vault.addFile(
 			"Note.md",
@@ -69,18 +64,16 @@ describe("ActionProcessor.processActionMarkers", () => {
 		expect(noteOut).toContain("|ACTION]]:** call Bob");
 		expect(noteOut).toContain("|ACTION]]:** email Alice");
 		expect(noteOut).not.toContain("@action");
+		expect(noteOut).not.toContain("#^");
 
-		// Both actions are filed as canonical Tasks lines, backlinked to the note.
-		expect(kanbanOut).toContain("- [ ] call Bob ➕ 2026-06-18 ^");
-		expect(kanbanOut).toContain("- [ ] email Alice ➕ 2026-06-18 ^");
-		expect(kanbanOut).toContain("[[Note]]");
-
-		// Every ACTION link in the note resolves to an anchor in the Kanban file.
-		const linkIds = [...noteOut.matchAll(/#\^(\w+)\|ACTION/g)].map((m) => m[1]);
-		const anchorIds = [...kanbanOut.matchAll(/\^(\w+)/g)].map((m) => m[1]);
-		expect(linkIds).toHaveLength(2);
-		expect(new Set(anchorIds).size).toBe(2);
-		expect(new Set(anchorIds)).toEqual(new Set(linkIds));
+		// Both actions are filed as canonical Tasks lines with inline backlinks.
+		expect(kanbanOut).toContain(
+			"- [ ] call Bob [[Note]] <!-- ➕ 2026-06-18 -->",
+		);
+		expect(kanbanOut).toContain(
+			"- [ ] email Alice [[Note]] <!-- ➕ 2026-06-18 -->",
+		);
+		expect(kanbanOut).not.toContain("^");
 	});
 
 	it("leaves a note with no markers untouched", async () => {
@@ -110,7 +103,7 @@ describe("ActionProcessor.processActionMarkers", () => {
 
 		await makeProcessor(vault).processActionMarkers(note);
 
-		// The note must not gain ACTION links to anchors that were never filed.
+		// The note must not gain ACTION links to work that was never filed.
 		expect(await vault.read(note)).toBe("@action do thing\n");
 		expect(await vault.read(kanban)).toBe("## Tasks\n");
 	});

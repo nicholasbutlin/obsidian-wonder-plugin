@@ -20,12 +20,11 @@ export interface CaptureContext {
 	kanbanFile: string;
 	noteBasename: string;
 	today: () => string;
-	newBlockId: () => string;
 }
 
 // Pure: rewrite every @action marker in a note to an ACTION link, and return the
-// canonical board entries to file for them. Each entry is anchored with the same
-// block ID its ACTION link targets, and backlinked to the source note.
+// canonical board entries to file for them. Each task includes an inline
+// backlink to the source note so it remains one self-contained board item.
 export function captureActions(
 	text: string,
 	ctx: CaptureContext,
@@ -36,13 +35,15 @@ export function captureActions(
 	// literal instead of triggering substitution patterns.
 	const rewritten = text.replace(ACTION_MARKER, (_match, rawText: string) => {
 		const actionText = rawText.trim();
-		const blockId = ctx.newBlockId();
-		const task = newTask({ text: actionText, created: ctx.today(), blockId });
+		const task = newTask({
+			text: `${actionText} [[${ctx.noteBasename}]]`,
+			created: ctx.today(),
+		});
 		captured.push({
 			text: actionText,
-			entry: `${task}\n[[${ctx.noteBasename}]]`,
+			entry: task,
 		});
-		return `**[[${ctx.kanbanFile}#^${blockId}|ACTION]]:** ${actionText}`;
+		return `**[[${ctx.kanbanFile}#ToDo|ACTION]]:** ${actionText}`;
 	});
 
 	return { rewritten, captured };

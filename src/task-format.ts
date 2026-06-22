@@ -13,20 +13,22 @@ export function formatCreated(date: string): string {
 	return `${CREATED_EMOJI} ${date}`;
 }
 
+export function formatHiddenCreated(date: string): string {
+	return `<!-- ${formatCreated(date)} -->`;
+}
+
 export function formatDone(date: string): string {
 	return `${DONE_EMOJI} ${date}`;
 }
 
-// A new, uncompleted task line filed on the board: checkbox, description, a
-// created-date stamp, and the block anchor the in-note ACTION link targets.
+// A new, uncompleted task line filed on the board: checkbox, description, and a
+// hidden created-date stamp.
 export function newTask({
 	text,
 	created,
-	blockId,
 }: {
 	text: string;
 	created: string;
-	blockId: string;
 }): string {
-	return `- [ ] ${text.trim()} ${formatCreated(created)} ^${blockId}`;
+	return `- [ ] ${text.trim()} ${formatHiddenCreated(created)}`;
 }

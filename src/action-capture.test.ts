@@ -10,34 +10,26 @@ const opts = {
 	kanbanFile: "ToDo Auto",
 	noteBasename: "Note",
 	today: () => "2026-06-18",
-	newBlockId: (() => {
-		let n = 0;
-		return () => `id${n++}`;
-	})(),
 };
 
 describe("captureActions", () => {
 	it("rewrites each @action marker to an ACTION link and captures a canonical task", () => {
 		const { rewritten, captured } = captureActions(
 			"# Notes\n@action call Bob\n@action: email Alice\n",
-			{
-				...opts,
-				newBlockId: (
-					(n = 0) =>
-					() =>
-						`id${n++}`
-				)(),
-			},
+			opts,
 		);
 
-		expect(rewritten).toContain("**[[ToDo Auto#^id0|ACTION]]:** call Bob");
-		expect(rewritten).toContain("**[[ToDo Auto#^id1|ACTION]]:** email Alice");
+		expect(rewritten).toContain("**[[ToDo Auto#ToDo|ACTION]]:** call Bob");
+		expect(rewritten).toContain(
+			"**[[ToDo Auto#ToDo|ACTION]]:** email Alice",
+		);
 		expect(rewritten).not.toContain("@action");
+		expect(rewritten).not.toContain("#^");
 
 		expect(captured).toHaveLength(2);
 		expect(captured[0]).toEqual({
 			text: "call Bob",
-			entry: "- [ ] call Bob ➕ 2026-06-18 ^id0\n[[Note]]",
+			entry: "- [ ] call Bob [[Note]] <!-- ➕ 2026-06-18 -->",
 		});
 	});
 

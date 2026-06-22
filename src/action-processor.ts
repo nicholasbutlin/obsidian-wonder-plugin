@@ -9,10 +9,6 @@ import {
 	type CapturedAction,
 } from "./action-capture";
 
-function randomBlockId(): string {
-	return Math.random().toString(36).substring(2, 9);
-}
-
 function todayIso(): string {
 	return window.moment().format("YYYY-MM-DD");
 }
@@ -23,18 +19,15 @@ export class ActionProcessor {
 	plugin: WonderPlugin;
 	app: App;
 
-	// Injectable so tests can assert against deterministic anchor IDs and date.
-	private generateBlockId: () => string;
+	// Injectable so tests can assert against a deterministic date.
 	private today: () => string;
 
 	constructor(
 		plugin: WonderPlugin,
-		generateBlockId: () => string = randomBlockId,
 		today: () => string = todayIso,
 	) {
 		this.plugin = plugin;
 		this.app = plugin.app;
-		this.generateBlockId = generateBlockId;
 		this.today = today;
 	}
 
@@ -49,7 +42,7 @@ export class ActionProcessor {
 
 		// Guard before mutating the note: without a "## ToDo" heading we cannot
 		// file the actions, and rewriting the note anyway would leave it linking
-		// to Kanban anchors that never get created.
+		// to board work that never gets created.
 		const kanbanContent = await this.app.vault.read(kanban);
 		if (!hasTodoHeading(kanbanContent)) {
 			new Notice(
@@ -66,7 +59,6 @@ export class ActionProcessor {
 				kanbanFile,
 				noteBasename: file.basename,
 				today: this.today,
-				newBlockId: this.generateBlockId,
 			});
 			captured = result.captured;
 			return result.rewritten;
