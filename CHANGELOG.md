@@ -1,3 +1,10 @@
+## [1.8.2](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.8.1...1.8.2) (2026-06-23)
+
+
+### Bug Fixes
+
+* stop diagram overlay from breaking Mermaid rendering ([4e46842](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/4e46842f0b7800214510c5507ec43202826c7398))
+
 ## [1.8.1](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.8.0...1.8.1) (2026-06-23)
 
 
