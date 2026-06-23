@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.6.1...1.7.0) (2026-06-23)
+
+
+### Features
+
+* add live Mermaid editor and CDN-based rendering ([3919440](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/39194400fac17c060ebab36a7385682d3d755deb))
+
 ## [1.6.1](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.6.0...1.6.1) (2026-06-23)
 
 
