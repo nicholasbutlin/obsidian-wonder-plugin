@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.6.0...1.6.1) (2026-06-23)
+
+
+### Bug Fixes
+
+* remove created date and block ID from action-captured tasks ([efa5271](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/efa527108ce36f874d44a4abbb28d86377ab3867))
+
 # [1.6.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.5.3...1.6.0) (2026-06-18)
 
 
