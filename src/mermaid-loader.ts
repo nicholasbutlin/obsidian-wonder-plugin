@@ -57,10 +57,13 @@ export function getMermaidConfig(
 export interface MermaidCdnCache {
 	version: string;
 	source: string;
-	// The ELK layout loader bundle (jsDelivr /+esm, deps inlined). Optional: ELK
-	// is best-effort and the diagram still renders without it.
-	elk?: string;
 }
+
+// Provides Mermaid's ELK layout loaders, or null when unavailable. ELK ships as
+// a separate bundled file (elk.js) loaded from disk on demand — see the plugin's
+// loadElkLoaders — rather than from a CDN, whose code-split render chunk fails to
+// load in Obsidian's blob/CSP context.
+export type ElkLoader = () => Promise<unknown[] | null>;
 
 export interface MermaidDiskCache {
 	read(): Promise<MermaidCdnCache | null>;
@@ -89,26 +92,6 @@ export async function fetchMermaidSource(version: string): Promise<string> {
 	return rewriteChunkImports(response.text, baseUrl);
 }
 
-// The ELK loader, as a jsDelivr /+esm bundle.
-const ELK_ESM_URL = "https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk/+esm";
-
-// Pure: rewrite jsDelivr's root-relative imports ("/npm/…") to absolute CDN
-// URLs. The ELK bundle lazily imports its render chunk via "/npm/…"; from a blob
-// URL (no origin) that path can't resolve, so it must be made absolute. Nested
-// chunks are then fetched over https and resolve their own "/npm/…" against the
-// jsDelivr origin automatically.
-export function rewriteRootImports(source: string): string {
-	return source.replace(
-		/(['"])\/npm\//g,
-		(_, q: string) => `${q}https://cdn.jsdelivr.net/npm/`,
-	);
-}
-
-export async function fetchElkSource(): Promise<string> {
-	const response = await requestUrl(ELK_ESM_URL);
-	return rewriteRootImports(response.text);
-}
-
 // Import an ESM source string through a transient blob URL.
 async function importFromSource(source: string): Promise<{ default: unknown }> {
 	const blob = new Blob([source], { type: "application/javascript" });
@@ -132,6 +115,7 @@ export async function getMermaid(
 	useObsidianTheme = true,
 	useElk = true,
 	useHandDrawn = false,
+	elkLoader?: ElkLoader,
 ): Promise<MermaidAPI> {
 	const cached = await cache.read();
 	const key = cached
@@ -159,11 +143,10 @@ export async function getMermaid(
 			mermaid.initialize(
 				getMermaidConfig(useObsidianTheme, useElk, useHandDrawn),
 			);
-			if (useElk && cached.elk) {
+			if (useElk && elkLoader) {
 				try {
-					const elkMod = await importFromSource(cached.elk);
-					const loaders = (elkMod.default ?? elkMod) as unknown[];
-					mermaid.registerLayoutLoaders(loaders);
+					const loaders = await elkLoader();
+					if (loaders) mermaid.registerLayoutLoaders(loaders);
 				} catch (err) {
 					console.warn(
 						"[Wonder] ELK layout failed to load; rendering without it.",

@@ -1,10 +1,6 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import WonderPlugin from "./main";
-import {
-	fetchElkSource,
-	fetchMermaidSource,
-	type MermaidCdnCache,
-} from "./mermaid-loader";
+import { fetchMermaidSource, type MermaidCdnCache } from "./mermaid-loader";
 
 export interface WonderSettings {
 	dateFormat: string;
@@ -170,7 +166,7 @@ export class WonderSettingTab extends PluginSettingTab {
 			.setName("Downloaded Mermaid")
 			.setDesc(
 				cache
-					? `Cached: ${cache.version}${cache.elk ? " (with ELK)" : ""}. All mermaid blocks render with this version.`
+					? `Cached: ${cache.version}. All mermaid blocks render with this version.`
 					: "Nothing downloaded — using Obsidian's built-in Mermaid.",
 			);
 
@@ -194,18 +190,9 @@ export class WonderSettingTab extends PluginSettingTab {
 						void (async () => {
 							try {
 								const source = await fetchMermaidSource(s.mermaidVersion);
-								// ELK is best-effort: a failure here shouldn't block the
-								// core download.
-								let elk: string | undefined;
-								try {
-									elk = await fetchElkSource();
-								} catch {
-									elk = undefined;
-								}
 								s.mermaidCdnCache = {
 									version: s.mermaidVersion,
 									source,
-									elk,
 								};
 								await this.plugin.saveSettings();
 								await this.plugin.syncMermaidGlobal();

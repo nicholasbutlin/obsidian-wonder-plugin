@@ -1,6 +1,6 @@
 import { TextFileView, WorkspaceLeaf, setIcon } from "obsidian";
 import WonderPlugin from "./main";
-import { createMermaidId, getMermaid } from "./mermaid-loader";
+import { createMermaidId } from "./mermaid-loader";
 
 export const MERMAID_FILE_VIEW_TYPE = "wonder-mermaid-file";
 export const MERMAID_FILE_EXTENSIONS = ["mermaid", "mmd"];
@@ -107,12 +107,7 @@ export class MermaidFileView extends TextFileView {
 			return;
 		}
 		try {
-			const mermaid = await getMermaid(
-				this.plugin.mermaidDiskCache,
-				this.plugin.settings.mermaidUseObsidianTheme,
-				this.plugin.settings.mermaidUseElk,
-				this.plugin.settings.mermaidUseHandDrawn,
-			);
+			const mermaid = await this.plugin.getMermaidInstance();
 			const { svg } = await mermaid.render(createMermaidId("wonder-mmd"), source);
 			if (seq !== this.renderSeq) return;
 			const doc = new DOMParser().parseFromString(

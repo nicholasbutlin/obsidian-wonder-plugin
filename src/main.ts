@@ -66,6 +66,10 @@ export default class WonderPlugin extends Plugin {
 		},
 	};
 
+	// Memoized ELK layout loaders, imported from the bundled elk.js shipped beside
+	// the plugin. Loaded once, on first use, and only when ELK is enabled.
+	private elkLoaders: Promise<unknown[] | null> | null = null;
+
 	async onload() {
 		await this.loadSettings();
 
@@ -354,6 +358,51 @@ export default class WonderPlugin extends Plugin {
 		await this.app.workspace.getLeaf(true).openFile(created);
 	}
 
+	// Resolve a ready Mermaid instance for the current settings, injecting the
+	// local ELK loader. Used by both views and the global swap.
+	getMermaidInstance(): Promise<MermaidAPI> {
+		return getMermaid(
+			this.mermaidDiskCache,
+			this.settings.mermaidUseObsidianTheme,
+			this.settings.mermaidUseElk,
+			this.settings.mermaidUseHandDrawn,
+			() => this.loadElkLoaders(),
+		);
+	}
+
+	// Import the bundled elk.js from the plugin folder (via the vault adapter) and
+	// return its layout loaders. Memoized; returns null on any failure so ELK
+	// simply degrades to the default layout.
+	private loadElkLoaders(): Promise<unknown[] | null> {
+		if (!this.elkLoaders) {
+			this.elkLoaders = (async () => {
+				try {
+					const path = `${this.app.vault.configDir}/plugins/${this.manifest.id}/elk.js`;
+					const source = await this.app.vault.adapter.read(path);
+					const blob = new Blob([source], {
+						type: "application/javascript",
+					});
+					const url = URL.createObjectURL(blob);
+					try {
+						const mod = (await import(/* @vite-ignore */ url)) as {
+							default?: unknown[];
+						};
+						return mod.default ?? null;
+					} finally {
+						URL.revokeObjectURL(url);
+					}
+				} catch (err) {
+					console.warn(
+						"[Wonder] ELK bundle (elk.js) unavailable; using default layout.",
+						err,
+					);
+					return null;
+				}
+			})();
+		}
+		return this.elkLoaders;
+	}
+
 	// The CodeMirror editor of the active markdown note, if any. Used by the view
 	// to insert a diagram when it isn't bound to an existing block.
 	activeMarkdownEditor(): Editor | null {
@@ -373,12 +422,7 @@ export default class WonderPlugin extends Plugin {
 				win.mermaid ?? ((await loadMermaid()) as MermaidAPI);
 		}
 		if (this.settings.mermaidCdnCache) {
-			const mermaid = await getMermaid(
-				this.mermaidDiskCache,
-				this.settings.mermaidUseObsidianTheme,
-				this.settings.mermaidUseElk,
-				this.settings.mermaidUseHandDrawn,
-			);
+			const mermaid = await this.getMermaidInstance();
 			const owned = mermaid as MermaidAPI & { [OWNED_BY_WONDER]?: true };
 			owned[OWNED_BY_WONDER] = true;
 			win.mermaid = owned;

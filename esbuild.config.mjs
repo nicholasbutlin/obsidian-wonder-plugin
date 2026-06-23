@@ -10,10 +10,8 @@ if you want to view the source, please visit the github repository of this plugi
 
 const prod = process.argv[2] === "production";
 
-const context = await esbuild.context({
-	banner: {
-		js: banner,
-	},
+const mainOptions = {
+	banner: { js: banner },
 	entryPoints: ["src/main.ts"],
 	bundle: true,
 	external: [
@@ -38,11 +36,32 @@ const context = await esbuild.context({
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,
 	outfile: "main.js",
-});
+};
+
+// ELK (elkjs, ~1.5MB) ships as a standalone ESM file, loaded from disk on demand
+// when ELK layout is enabled, so it never weighs down main.js. Bundled with no
+// code-splitting so it's a single self-contained module importable via a blob URL.
+const elkOptions = {
+	banner: { js: banner },
+	entryPoints: ["src/elk-entry.ts"],
+	bundle: true,
+	format: "esm",
+	target: "es2018",
+	logLevel: "info",
+	sourcemap: false,
+	treeShaking: true,
+	minify: prod,
+	outfile: "elk.js",
+};
+
+const main = await esbuild.context(mainOptions);
+const elk = await esbuild.context(elkOptions);
 
 if (prod) {
-	await context.rebuild();
+	await main.rebuild();
+	await elk.rebuild();
 	process.exit(0);
 } else {
-	await context.watch();
+	await main.watch();
+	await elk.watch();
 }

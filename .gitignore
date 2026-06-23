@@ -12,6 +12,9 @@ node_modules
 # They should be uploaded to GitHub releases instead.
 main.js
 
+# Compiled ELK bundle (built by esbuild, shipped as a release asset)
+elk.js
+
 # Exclude sourcemaps
 *.map
 
