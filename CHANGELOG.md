@@ -1,3 +1,10 @@
+## [1.8.3](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.8.2...1.8.3) (2026-06-23)
+
+
+### Bug Fixes
+
+* ship ELK as a local bundle instead of CDN ([c0cb9db](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/c0cb9dbd59108cf08cc88c1e4e3cd296837e9b98))
+
 ## [1.8.2](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.8.1...1.8.2) (2026-06-23)
 
 

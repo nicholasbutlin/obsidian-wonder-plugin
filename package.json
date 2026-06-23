@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-wonder-plugin",
-	"version": "1.8.2",
+	"version": "1.8.3",
 	"description": "Hoping to do some wonderful things with Obsidian",
 	"main": "main.js",
 	"scripts": {
