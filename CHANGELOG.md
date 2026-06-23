@@ -1,3 +1,10 @@
+## [1.8.4](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.8.3...1.8.4) (2026-06-23)
+
+
+### Bug Fixes
+
+* edit button binds to the clicked diagram, not the first ([80db94a](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/80db94a8dbbeb9aee56fc84b4ee4d581c062ae22))
+
 ## [1.8.3](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.8.2...1.8.3) (2026-06-23)
 
 
