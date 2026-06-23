@@ -27,6 +27,8 @@ export class Setting {}
 export class ItemView {}
 export class WorkspaceLeaf {}
 export class MarkdownView {}
+export class TextFileView {}
+export class TFolder extends TAbstractFile {}
 
 export function setIcon(_parent: unknown, _icon: string): void {}
 

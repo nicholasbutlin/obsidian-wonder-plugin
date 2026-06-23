@@ -1,35 +1,31 @@
 import { ItemView, Notice, TFile, WorkspaceLeaf, setIcon } from "obsidian";
 import WonderPlugin from "./main";
-import { createMermaidId, getMermaid } from "./mermaid-loader";
-import {
-	findFirstMermaidBlock,
-	findMermaidBlockAt,
-	replaceBlockBody,
-} from "./mermaid-block";
+import { findMermaidBlockAt, replaceBlockBody } from "./mermaid-block";
+import { SNIPPET_CATEGORIES } from "./mermaid-snippets";
 
 export const MERMAID_VIEW_TYPE = "wonder-mermaid-editor";
 
-// Where an editing session's source lives in the vault, so "Write back" knows
-// which block in which file to update. Captured at load time against the file's
-// then-current text; re-resolved at save time so concurrent edits don't clobber.
-interface DiagramSource {
+// Which note block this editing session is bound to. The note itself is the live
+// preview: as the user types, the bound block is rewritten (debounced) so
+// Obsidian re-renders the diagram in place. `anchorLine` is the block's opening
+// fence; content above it never changes from here, so it stays valid across
+// edits and we re-locate the block from it on every write.
+interface DiagramBinding {
 	file: TFile;
-	// The line the block was found at, used to re-locate it at save time.
 	anchorLine: number;
 }
 
-// A side-panel live editor: type Mermaid on the left, see it rendered on the
-// right. Can be opened blank (a scratchpad) or seeded from a `mermaid` block in
-// the active note, in which case edits can be written back to that block.
+// A side-panel Mermaid editor: a source box plus a snippet palette. Opened bound
+// to a specific `mermaid` block (via the edit button on a rendered diagram, or
+// the cursor command); edits stream back to that block so the note is the
+// preview. When unbound it acts as a scratchpad with an "Insert into note" action.
 export class MermaidEditorView extends ItemView {
 	private plugin: WonderPlugin;
 	private textarea!: HTMLTextAreaElement;
-	private preview!: HTMLElement;
-	private source: DiagramSource | null = null;
-	private renderTimer: ReturnType<typeof setTimeout> | null = null;
-	// Monotonic token so a slow render that resolves after a newer edit is
-	// discarded instead of overwriting the fresher preview.
-	private renderSeq = 0;
+	private statusEl!: HTMLElement;
+	private binding: DiagramBinding | null = null;
+	private pendingValue: string | null = null;
+	private writeTimer: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: WonderPlugin) {
 		super(leaf);
@@ -45,7 +41,7 @@ export class MermaidEditorView extends ItemView {
 	}
 
 	getIcon(): string {
-		return "git-fork";
+		return "pencil";
 	}
 
 	protected async onOpen(): Promise<void> {
@@ -53,127 +49,133 @@ export class MermaidEditorView extends ItemView {
 		root.empty();
 		root.addClass("wonder-mermaid-editor");
 
-		const toolbar = root.createDiv({ cls: "wonder-mermaid-toolbar" });
-		const writeBtn = toolbar.createEl("button", {
-			cls: "wonder-mermaid-writeback",
+		const header = root.createDiv({ cls: "wonder-mermaid-header" });
+		this.statusEl = header.createDiv({ cls: "wonder-mermaid-status" });
+		const insertBtn = header.createEl("button", {
+			cls: "wonder-mermaid-insert",
+			text: "Insert into note",
 		});
-		setIcon(writeBtn.createSpan(), "save");
-		writeBtn.createSpan({ text: "Write to note" });
-		writeBtn.addEventListener("click", () => void this.writeBack());
+		insertBtn.addEventListener("click", () => void this.insertIntoActiveNote());
 
-		const body = root.createDiv({ cls: "wonder-mermaid-body" });
-		this.textarea = body.createEl("textarea", {
+		this.textarea = root.createEl("textarea", {
 			cls: "wonder-mermaid-source",
-			attr: { spellcheck: "false", placeholder: "graph TD\n  A --> B" },
+			attr: { spellcheck: "false", placeholder: "flowchart TD\n  A --> B" },
 		});
-		this.preview = body.createDiv({ cls: "wonder-mermaid-preview" });
+		if (this.pendingValue !== null) {
+			this.textarea.value = this.pendingValue;
+			this.pendingValue = null;
+		}
+		this.textarea.addEventListener("input", () => this.scheduleWrite());
 
-		this.textarea.addEventListener("input", () => this.scheduleRender());
-		this.scheduleRender();
+		this.buildPalette(root);
+		this.updateStatus();
 	}
 
 	protected async onClose(): Promise<void> {
-		if (this.renderTimer) clearTimeout(this.renderTimer);
+		if (this.writeTimer) clearTimeout(this.writeTimer);
 	}
 
-	// Seed the editor from arbitrary source, optionally bound to a note block so
-	// edits can be written back.
-	setDiagram(source: string, binding: DiagramSource | null = null): void {
-		this.source = binding;
+	// Seed the editor, optionally binding it to a note block. Safe to call before
+	// onOpen has built the DOM (the value is stashed and applied on open).
+	setDiagram(source: string, binding: DiagramBinding | null = null): void {
+		this.binding = binding;
 		if (this.textarea) {
 			this.textarea.value = source;
-			this.scheduleRender();
+			this.updateStatus();
 		} else {
-			// onOpen hasn't run yet; stash the value so it lands once the DOM exists.
 			this.pendingValue = source;
 		}
 	}
 
-	private pendingValue: string | null = null;
-
-	private scheduleRender(): void {
-		if (this.pendingValue !== null && this.textarea) {
-			this.textarea.value = this.pendingValue;
-			this.pendingValue = null;
-		}
-		if (this.renderTimer) clearTimeout(this.renderTimer);
-		this.renderTimer = setTimeout(() => void this.render(), 300);
+	private updateStatus(): void {
+		if (!this.statusEl) return;
+		this.statusEl.setText(
+			this.binding
+				? `Editing in ${this.binding.file.basename}`
+				: "Scratchpad — not linked to a note",
+		);
 	}
 
-	private async render(): Promise<void> {
-		const source = this.textarea.value.trim();
-		const seq = ++this.renderSeq;
-		if (!source) {
-			this.preview.empty();
-			return;
-		}
-		try {
-			const mermaid = await getMermaid(
-				this.plugin.mermaidDiskCache,
-				this.plugin.settings.mermaidUseObsidianTheme,
-				this.plugin.settings.mermaidUseElk,
-				this.plugin.settings.mermaidUseHandDrawn,
-			);
-			const { svg } = await mermaid.render(
-				createMermaidId("wonder-mermaid"),
-				source,
-			);
-			if (seq !== this.renderSeq) return; // superseded by a newer edit
-			if (!svg?.trim()) throw new Error("Mermaid returned an empty diagram.");
-			// Parse as HTML, not XML: Mermaid's DOMPurify pass emits <br> (not
-			// <br/>) inside <foreignObject>, which is invalid XML.
-			const doc = new DOMParser().parseFromString(
-				`<body>${svg}</body>`,
-				"text/html",
-			);
-			const svgEl = doc.querySelector("svg");
-			if (!svgEl) throw new Error("No SVG element in Mermaid output.");
-			this.preview.replaceChildren(document.adoptNode(svgEl));
-		} catch (err) {
-			if (seq !== this.renderSeq) return;
-			this.preview.empty();
-			const pre = this.preview.createEl("pre", {
-				cls: "wonder-mermaid-error",
-			});
-			pre.textContent = `Error rendering Mermaid diagram:\n${
-				err instanceof Error ? err.message : String(err)
-			}`;
-		}
+	private scheduleWrite(): void {
+		if (this.writeTimer) clearTimeout(this.writeTimer);
+		// Only bound sessions stream to a note; a scratchpad waits for "Insert".
+		if (!this.binding) return;
+		this.writeTimer = setTimeout(() => void this.writeBack(), 400);
 	}
 
-	// Persist the current source back to the originating note block, or — when the
-	// editor isn't bound to one — insert it as a new block in the active note.
+	// Rewrite the bound block with the current source so the note re-renders.
 	private async writeBack(): Promise<void> {
+		if (!this.binding) return;
+		const { file, anchorLine } = this.binding;
 		const source = this.textarea.value.replace(/\s+$/, "");
-		if (this.source) {
-			const { file, anchorLine } = this.source;
-			let located = false;
-			await this.plugin.app.vault.process(file, (data) => {
-				const block =
-					findMermaidBlockAt(data, anchorLine) ??
-					findFirstMermaidBlock(data);
-				if (!block) return data;
-				located = true;
-				return replaceBlockBody(data, block, source);
-			});
-			new Notice(
-				located
-					? `Wonder: updated Mermaid block in "${file.basename}".`
-					: `Wonder: couldn't find the original block in "${file.basename}".`,
-			);
-			return;
-		}
-		await this.insertIntoActiveNote(source);
+		await this.plugin.app.vault.process(file, (data) => {
+			const block = findMermaidBlockAt(data, anchorLine);
+			if (!block) return data; // block moved/removed; leave the note untouched
+			return replaceBlockBody(data, block, source);
+		});
 	}
 
-	private async insertIntoActiveNote(source: string): Promise<void> {
-		const view = this.plugin.app.workspace.getActiveFile();
+	private async insertIntoActiveNote(): Promise<void> {
+		const source = this.textarea.value.replace(/\s+$/, "");
+		if (!source) {
+			new Notice("Wonder: nothing to insert.");
+			return;
+		}
+		const file = this.plugin.app.workspace.getActiveFile();
 		const editor = this.plugin.activeMarkdownEditor();
-		if (!view || !editor) {
+		if (!file || !editor) {
 			new Notice("Wonder: open a note to insert the diagram into.");
 			return;
 		}
 		editor.replaceSelection(`\`\`\`mermaid\n${source}\n\`\`\`\n`);
-		new Notice(`Wonder: inserted Mermaid block into "${view.basename}".`);
+		new Notice(`Wonder: inserted Mermaid block into "${file.basename}".`);
+	}
+
+	// The snippet palette: collapsible categories of insertable snippets, plus a
+	// "scaffold" action per category that drops a full diagram skeleton.
+	private buildPalette(root: HTMLElement): void {
+		const palette = root.createDiv({ cls: "wonder-mermaid-palette" });
+		for (const category of SNIPPET_CATEGORIES) {
+			const group = palette.createDiv({ cls: "wonder-mermaid-cat" });
+			const head = group.createDiv({ cls: "wonder-mermaid-cat-head" });
+			const caret = head.createSpan({ cls: "wonder-mermaid-caret" });
+			setIcon(caret, "chevron-right");
+			head.createSpan({ text: category.name });
+
+			const items = group.createDiv({ cls: "wonder-mermaid-cat-items" });
+			items.hide();
+			head.addEventListener("click", () => {
+				const open = items.isShown();
+				items.toggle(!open);
+				setIcon(caret, open ? "chevron-right" : "chevron-down");
+			});
+
+			const scaffold = items.createEl("button", {
+				cls: "wonder-mermaid-snippet wonder-mermaid-scaffold",
+				text: `Insert ${category.name} skeleton`,
+			});
+			scaffold.addEventListener("click", () =>
+				this.insertSnippet(`${category.scaffold}\n`),
+			);
+			for (const item of category.items) {
+				const btn = items.createEl("button", {
+					cls: "wonder-mermaid-snippet",
+					text: item.label,
+				});
+				btn.addEventListener("click", () =>
+					this.insertSnippet(`${item.snippet}\n`),
+				);
+			}
+		}
+	}
+
+	// Insert text at the textarea's cursor, then stream to the note.
+	private insertSnippet(text: string): void {
+		const ta = this.textarea;
+		const start = ta.selectionStart;
+		const end = ta.selectionEnd;
+		ta.setRangeText(text, start, end, "end");
+		ta.focus();
+		this.scheduleWrite();
 	}
 }

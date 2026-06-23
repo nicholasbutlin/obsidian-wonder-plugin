@@ -1,40 +1,42 @@
 /* Wonder plugin styles. */
 
-/* Live Mermaid editor (side-panel ItemView). */
-.wonder-mermaid-editor {
+/* ---- Side-panel Mermaid editor (and standalone file view) ---- */
+.wonder-mermaid-editor,
+.wonder-mermaid-file {
 	display: flex;
 	flex-direction: column;
 	height: 100%;
 	padding: 0;
 }
 
-.wonder-mermaid-toolbar {
+.wonder-mermaid-header {
 	display: flex;
+	align-items: center;
+	justify-content: space-between;
 	gap: var(--size-4-2);
 	padding: var(--size-4-2);
 	border-bottom: 1px solid var(--background-modifier-border);
 }
 
-.wonder-mermaid-writeback {
-	display: inline-flex;
-	align-items: center;
-	gap: var(--size-4-1);
-	cursor: pointer;
+.wonder-mermaid-status {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
-.wonder-mermaid-body {
-	display: flex;
-	flex: 1;
-	min-height: 0;
-	flex-direction: column;
+.wonder-mermaid-insert {
+	cursor: pointer;
+	flex: 0 0 auto;
 }
 
 .wonder-mermaid-source {
-	flex: 0 0 40%;
+	flex: 1 1 auto;
 	width: 100%;
-	resize: vertical;
+	min-height: 8em;
+	resize: none;
 	border: none;
-	border-bottom: 1px solid var(--background-modifier-border);
 	border-radius: 0;
 	padding: var(--size-4-2);
 	font-family: var(--font-monospace);
@@ -43,8 +45,13 @@
 	color: var(--text-normal);
 }
 
+/* Standalone file view: source pane is the whole area. */
+.wonder-mermaid-file .wonder-mermaid-source {
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
 .wonder-mermaid-preview {
-	flex: 1;
+	flex: 1 1 auto;
 	min-height: 0;
 	overflow: auto;
 	padding: var(--size-4-3);
@@ -58,9 +65,111 @@
 	height: auto;
 }
 
+.wonder-mermaid-empty {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	margin: auto;
+}
+
 .wonder-mermaid-error {
 	color: var(--text-error);
 	white-space: pre-wrap;
 	font-family: var(--font-monospace);
 	font-size: var(--font-ui-small);
+}
+
+/* ---- Snippet palette ---- */
+.wonder-mermaid-palette {
+	flex: 0 0 auto;
+	max-height: 45%;
+	overflow-y: auto;
+	border-top: 1px solid var(--background-modifier-border);
+	padding: var(--size-4-1) 0;
+}
+
+.wonder-mermaid-cat-head {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-1);
+	padding: var(--size-4-1) var(--size-4-2);
+	cursor: pointer;
+	font-size: var(--font-ui-small);
+	font-weight: var(--font-medium);
+	user-select: none;
+}
+
+.wonder-mermaid-cat-head:hover {
+	background: var(--interactive-hover);
+}
+
+.wonder-mermaid-caret {
+	display: inline-flex;
+	color: var(--text-muted);
+}
+
+.wonder-mermaid-cat-items {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-4-1);
+	padding: var(--size-4-1) var(--size-4-2) var(--size-4-2);
+}
+
+.wonder-mermaid-snippet {
+	cursor: pointer;
+	font-size: var(--font-ui-smaller);
+	padding: 2px 8px;
+}
+
+.wonder-mermaid-scaffold {
+	flex: 1 0 100%;
+	text-align: left;
+	color: var(--text-accent);
+}
+
+/* ---- In-note diagram overlay (edit + pan/zoom) ---- */
+.wonder-mermaid-decorated {
+	position: relative;
+	overflow: hidden;
+}
+
+.wonder-mermaid-zoom {
+	transform-origin: 0 0;
+	transition: transform 0.05s linear;
+}
+
+.wonder-mermaid-panning {
+	cursor: grabbing;
+}
+
+.wonder-mermaid-overlay {
+	position: absolute;
+	top: var(--size-4-1);
+	right: var(--size-4-1);
+	display: flex;
+	gap: 2px;
+	opacity: 0;
+	transition: opacity 0.12s ease;
+	z-index: 1;
+}
+
+.wonder-mermaid-decorated:hover .wonder-mermaid-overlay {
+	opacity: 1;
+}
+
+.wonder-mermaid-overlay-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 4px;
+	cursor: pointer;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	color: var(--text-muted);
+	box-shadow: var(--shadow-s);
+}
+
+.wonder-mermaid-overlay-btn:hover {
+	color: var(--text-normal);
+	background: var(--background-modifier-hover);
 }

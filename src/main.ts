@@ -1,10 +1,12 @@
 import {
 	Editor,
+	MarkdownPostProcessorContext,
 	MarkdownView,
 	Notice,
 	Plugin,
 	TAbstractFile,
 	TFile,
+	TFolder,
 	loadMermaid,
 } from "obsidian";
 import { WonderSettings, DEFAULT_SETTINGS, WonderSettingTab } from "./settings";
@@ -18,7 +20,13 @@ import {
 	type MermaidDiskCache,
 } from "./mermaid-loader";
 import { MERMAID_VIEW_TYPE, MermaidEditorView } from "./mermaid-view";
-import { findMermaidBlockAt } from "./mermaid-block";
+import { findFirstMermaidBlock, findMermaidBlockAt } from "./mermaid-block";
+import { decorateDiagram } from "./mermaid-overlay";
+import {
+	MERMAID_FILE_EXTENSIONS,
+	MERMAID_FILE_VIEW_TYPE,
+	MermaidFileView,
+} from "./mermaid-file-view";
 
 // Marks a `window.mermaid` we installed, so we know whether to restore Obsidian's
 // original on unload and don't re-stash our own as the "original".
@@ -66,6 +74,13 @@ export default class WonderPlugin extends Plugin {
 			MERMAID_VIEW_TYPE,
 			(leaf) => new MermaidEditorView(leaf, this),
 		);
+		// Standalone .mermaid/.mmd files open in their own diagram editor.
+		this.registerView(
+			MERMAID_FILE_VIEW_TYPE,
+			(leaf) => new MermaidFileView(leaf, this),
+		);
+		this.registerExtensions(MERMAID_FILE_EXTENSIONS, MERMAID_FILE_VIEW_TYPE);
+
 		this.addRibbonIcon("git-fork", "Open Mermaid editor", () =>
 			this.openMermaidEditor(),
 		);
@@ -79,6 +94,32 @@ export default class WonderPlugin extends Plugin {
 			name: "Edit Mermaid block at cursor",
 			editorCallback: (editor) => this.editMermaidBlockAtCursor(editor),
 		});
+		this.addCommand({
+			id: "new-mermaid-file",
+			name: "Create new Mermaid file",
+			callback: () => void this.createMermaidFile(),
+		});
+
+		// Add an edit button + pan/zoom overlay to every rendered diagram.
+		if (this.settings.mermaidDiagramTools) {
+			this.registerMarkdownPostProcessor((el, ctx) =>
+				this.decorateDiagrams(el, ctx),
+			);
+		}
+
+		// "New Mermaid file" in the folder context menu.
+		this.registerEvent(
+			this.app.workspace.on("file-menu", (menu, file) => {
+				const folder = file instanceof TFolder ? file : file.parent;
+				if (!folder) return;
+				menu.addItem((item) =>
+					item
+						.setTitle("New Mermaid file")
+						.setIcon("git-fork")
+						.onClick(() => void this.createMermaidFile(folder)),
+				);
+			}),
+		);
 
 		// Replace Obsidian's built-in Mermaid with the downloaded version (no-op
 		// until a version is downloaded). Deferred to layout-ready so the built-in
@@ -189,6 +230,72 @@ export default class WonderPlugin extends Plugin {
 			file,
 			anchorLine: block.startLine,
 		});
+	}
+
+	// Add the edit + pan/zoom overlay to each rendered diagram in a chunk. The
+	// edit button is bound to the diagram's source block via the section's line
+	// range when Obsidian can resolve it (reading view and most live-preview
+	// cases); otherwise it falls back to the note's first/only block.
+	private decorateDiagrams(
+		el: HTMLElement,
+		ctx: MarkdownPostProcessorContext,
+	): void {
+		const file = this.app.vault.getAbstractFileByPath(ctx.sourcePath);
+		const nodes = new Set<HTMLElement>(
+			Array.from(el.querySelectorAll<HTMLElement>(".mermaid")),
+		);
+		if (el.classList.contains("mermaid")) nodes.add(el);
+		nodes.forEach((node) => {
+			const info = ctx.getSectionInfo(node) ?? ctx.getSectionInfo(el);
+			decorateDiagram(node, {
+				enableZoom: true,
+				onEdit:
+					file instanceof TFile
+						? () => this.openEditorForDiagram(file, info?.lineStart ?? null)
+						: undefined,
+			});
+		});
+	}
+
+	// Resolve a clicked diagram's source block and open the editor bound to it.
+	private openEditorForDiagram(file: TFile, lineStart: number | null): void {
+		void (async () => {
+			const content = await this.app.vault.read(file);
+			const block =
+				(lineStart != null ? findMermaidBlockAt(content, lineStart) : null) ??
+				findFirstMermaidBlock(content);
+			if (!block) {
+				new Notice("Wonder: couldn't find the diagram source.");
+				return;
+			}
+			await this.openMermaidEditor({
+				source: block.body,
+				file,
+				anchorLine: block.startLine,
+			});
+		})();
+	}
+
+	// Create a new, empty .mermaid file and open it. Defaults to the active file's
+	// folder when invoked from a command.
+	private async createMermaidFile(folder?: TFolder): Promise<void> {
+		const parent =
+			folder ??
+			this.app.workspace.getActiveFile()?.parent ??
+			this.app.vault.getRoot();
+		const ext = MERMAID_FILE_EXTENSIONS[0];
+		const base = "Untitled diagram";
+		let name = `${base}.${ext}`;
+		let n = 1;
+		const dir = parent.path === "/" ? "" : `${parent.path}/`;
+		while (this.app.vault.getAbstractFileByPath(`${dir}${name}`)) {
+			name = `${base} ${n++}.${ext}`;
+		}
+		const created = await this.app.vault.create(
+			`${dir}${name}`,
+			"flowchart TD\n  A --> B\n",
+		);
+		await this.app.workspace.getLeaf(true).openFile(created);
 	}
 
 	// The CodeMirror editor of the active markdown note, if any. Used by the view

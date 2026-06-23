@@ -25,6 +25,8 @@ export interface WonderSettings {
 	mermaidUseElk: boolean;
 	mermaidUseHandDrawn: boolean;
 	mermaidCdnCache: MermaidCdnCache | null;
+	// Show the edit button + pan/zoom overlay on rendered diagrams in notes.
+	mermaidDiagramTools: boolean;
 }
 
 export const DEFAULT_SETTINGS: WonderSettings = {
@@ -41,6 +43,7 @@ export const DEFAULT_SETTINGS: WonderSettings = {
 	mermaidUseElk: true,
 	mermaidUseHandDrawn: false,
 	mermaidCdnCache: null,
+	mermaidDiagramTools: true,
 };
 
 // The Kanban setting stores a vault-relative name without extension; the file
@@ -243,6 +246,18 @@ export class WonderSettingTab extends PluginSettingTab {
 				s.mermaidUseHandDrawn = value;
 			},
 		);
+
+		new Setting(this.containerEl)
+			.setName("Diagram edit & zoom controls")
+			.setDesc(
+				"Show an edit button and pan/zoom controls on rendered diagrams in notes. Takes effect after a reload.",
+			)
+			.addToggle((toggle) =>
+				toggle.setValue(s.mermaidDiagramTools).onChange(async (value) => {
+					s.mermaidDiagramTools = value;
+					await this.plugin.saveSettings();
+				}),
+			);
 	}
 
 	// A toggle that, after saving, re-syncs the global Mermaid instance so open
