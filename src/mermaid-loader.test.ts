@@ -4,6 +4,7 @@ import {
 	createMermaidId,
 	getMermaidConfig,
 	rewriteChunkImports,
+	rewriteRootImports,
 } from "./mermaid-loader";
 
 describe("cdnBaseUrl", () => {
@@ -33,6 +34,20 @@ describe("rewriteChunkImports", () => {
 	it("leaves absolute imports untouched", () => {
 		const src = `import x from "https://example.com/x.mjs";`;
 		expect(rewriteChunkImports(src, base)).toBe(src);
+	});
+});
+
+describe("rewriteRootImports", () => {
+	it("rewrites root-relative /npm/ imports to absolute jsDelivr URLs", () => {
+		const src = `import('/npm/@mermaid-js/layout-elk@0.2.1/dist/chunks/render-X.mjs/+esm')`;
+		expect(rewriteRootImports(src)).toBe(
+			`import('https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.2.1/dist/chunks/render-X.mjs/+esm')`,
+		);
+	});
+
+	it("leaves already-absolute imports untouched", () => {
+		const src = `import x from "https://cdn.jsdelivr.net/npm/x/+esm";`;
+		expect(rewriteRootImports(src)).toBe(src);
 	});
 });
 

@@ -1,6 +1,5 @@
 import {
 	Editor,
-	MarkdownPostProcessorContext,
 	MarkdownView,
 	Notice,
 	Plugin,
@@ -20,7 +19,10 @@ import {
 	type MermaidDiskCache,
 } from "./mermaid-loader";
 import { MERMAID_VIEW_TYPE, MermaidEditorView } from "./mermaid-view";
-import { findFirstMermaidBlock, findMermaidBlockAt } from "./mermaid-block";
+import {
+	findAllMermaidBlocks,
+	findMermaidBlockAt,
+} from "./mermaid-block";
 import { decorateDiagram } from "./mermaid-overlay";
 import {
 	MERMAID_FILE_EXTENSIONS,
@@ -100,11 +102,12 @@ export default class WonderPlugin extends Plugin {
 			callback: () => void this.createMermaidFile(),
 		});
 
-		// Add an edit button + pan/zoom overlay to every rendered diagram.
+		// Add an edit button + pan/zoom overlay to every rendered diagram. A
+		// MutationObserver (not a markdown post-processor) is used because Obsidian
+		// renders Mermaid asynchronously, after post-processors have run, so a
+		// post-processor frequently sees no `.mermaid` element yet.
 		if (this.settings.mermaidDiagramTools) {
-			this.registerMarkdownPostProcessor((el, ctx) =>
-				this.decorateDiagrams(el, ctx),
-			);
+			this.app.workspace.onLayoutReady(() => this.startDiagramDecoration());
 		}
 
 		// "New Mermaid file" in the folder context menu.
@@ -232,38 +235,55 @@ export default class WonderPlugin extends Plugin {
 		});
 	}
 
-	// Add the edit + pan/zoom overlay to each rendered diagram in a chunk. The
-	// edit button is bound to the diagram's source block via the section's line
-	// range when Obsidian can resolve it (reading view and most live-preview
-	// cases); otherwise it falls back to the note's first/only block.
-	private decorateDiagrams(
-		el: HTMLElement,
-		ctx: MarkdownPostProcessorContext,
-	): void {
-		const file = this.app.vault.getAbstractFileByPath(ctx.sourcePath);
-		const nodes = new Set<HTMLElement>(
-			Array.from(el.querySelectorAll<HTMLElement>(".mermaid")),
-		);
-		if (el.classList.contains("mermaid")) nodes.add(el);
-		nodes.forEach((node) => {
-			const info = ctx.getSectionInfo(node) ?? ctx.getSectionInfo(el);
-			decorateDiagram(node, {
-				enableZoom: true,
-				onEdit:
-					file instanceof TFile
-						? () => this.openEditorForDiagram(file, info?.lineStart ?? null)
-						: undefined,
-			});
+	// Watch the DOM for rendered Mermaid diagrams (reading view and Live Preview)
+	// and attach the edit + pan/zoom overlay to each. Obsidian adds these nodes
+	// asynchronously, so an observer catches them reliably where a post-processor
+	// would race the render.
+	private startDiagramDecoration(): void {
+		const decorate = (node: HTMLElement) => {
+			const targets: HTMLElement[] = [];
+			if (node.classList?.contains("mermaid")) targets.push(node);
+			node.querySelectorAll?.<HTMLElement>(".mermaid").forEach((n) =>
+				targets.push(n),
+			);
+			for (const el of targets) {
+				decorateDiagram(el, {
+					enableZoom: true,
+					onEdit: () => this.editDiagramElement(el),
+				});
+			}
+		};
+
+		const observer = new MutationObserver((mutations) => {
+			for (const m of mutations) {
+				for (const added of Array.from(m.addedNodes)) {
+					if (added instanceof HTMLElement) decorate(added);
+				}
+			}
 		});
+		observer.observe(document.body, { childList: true, subtree: true });
+		this.register(() => observer.disconnect());
+
+		// Decorate anything already on screen at startup.
+		document
+			.querySelectorAll<HTMLElement>(".mermaid")
+			.forEach((el) => decorate(el));
 	}
 
-	// Resolve a clicked diagram's source block and open the editor bound to it.
-	private openEditorForDiagram(file: TFile, lineStart: number | null): void {
+	// Resolve a clicked diagram's source block by its position among the rendered
+	// diagrams of its note, then open the editor bound to it. Position mapping is
+	// used because a rendered SVG carries no link back to its source lines.
+	private editDiagramElement(el: HTMLElement): void {
+		const file = this.fileForElement(el) ?? this.app.workspace.getActiveFile();
+		if (!(file instanceof TFile)) {
+			new Notice("Wonder: couldn't find the note for this diagram.");
+			return;
+		}
+		const index = this.diagramIndex(el);
 		void (async () => {
 			const content = await this.app.vault.read(file);
-			const block =
-				(lineStart != null ? findMermaidBlockAt(content, lineStart) : null) ??
-				findFirstMermaidBlock(content);
+			const blocks = findAllMermaidBlocks(content);
+			const block = blocks[index] ?? blocks[0];
 			if (!block) {
 				new Notice("Wonder: couldn't find the diagram source.");
 				return;
@@ -274,6 +294,28 @@ export default class WonderPlugin extends Plugin {
 				anchorLine: block.startLine,
 			});
 		})();
+	}
+
+	// The file backing the workspace leaf that contains this element.
+	private fileForElement(el: HTMLElement): TFile | null {
+		for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
+			const view = leaf.view;
+			if (view instanceof MarkdownView && view.containerEl.contains(el)) {
+				return view.file ?? null;
+			}
+		}
+		return null;
+	}
+
+	// This diagram's index among all rendered diagrams in its scroll container,
+	// matching document order of the source blocks.
+	private diagramIndex(el: HTMLElement): number {
+		const container =
+			el.closest(".markdown-preview-view, .markdown-source-view, .view-content") ??
+			document.body;
+		const all = Array.from(container.querySelectorAll<HTMLElement>(".mermaid"));
+		const idx = all.indexOf(el);
+		return idx < 0 ? 0 : idx;
 	}
 
 	// Create a new, empty .mermaid file and open it. Defaults to the active file's

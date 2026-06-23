@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	findAllMermaidBlocks,
 	findFirstMermaidBlock,
 	findMermaidBlockAt,
 	replaceBlockBody,
@@ -76,6 +77,27 @@ describe("findMermaidBlockAt", () => {
 		].join("\n");
 		expect(findMermaidBlockAt(text, 5)?.startLine).toBe(4);
 		expect(findMermaidBlockAt(text, 3)).toBeNull();
+	});
+});
+
+describe("findAllMermaidBlocks", () => {
+	it("returns every block in document order", () => {
+		const text = [
+			"```mermaid",
+			"a",
+			"```",
+			"text",
+			"```mermaid",
+			"b",
+			"```",
+		].join("\n");
+		const all = findAllMermaidBlocks(text);
+		expect(all.map((b) => b.body)).toEqual(["a", "b"]);
+		expect(all.map((b) => b.startLine)).toEqual([0, 4]);
+	});
+
+	it("returns an empty array when there are no blocks", () => {
+		expect(findAllMermaidBlocks("just text")).toEqual([]);
 	});
 });
 

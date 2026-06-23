@@ -46,6 +46,12 @@ export function findFirstMermaidBlock(text: string): MermaidBlock | null {
 	return null;
 }
 
+// Every mermaid block in document order. Used to map a rendered diagram to its
+// source by position when an exact line range isn't available.
+export function findAllMermaidBlocks(text: string): MermaidBlock[] {
+	return [...iterMermaidBlocks(text.split("\n"))];
+}
+
 function* iterMermaidBlocks(lines: string[]): Generator<MermaidBlock> {
 	let i = 0;
 	while (i < lines.length) {

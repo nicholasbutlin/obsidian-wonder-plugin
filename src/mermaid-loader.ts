@@ -89,12 +89,24 @@ export async function fetchMermaidSource(version: string): Promise<string> {
 	return rewriteChunkImports(response.text, baseUrl);
 }
 
-// The ELK loader, as a self-contained ESM bundle (elkjs inlined by jsDelivr).
+// The ELK loader, as a jsDelivr /+esm bundle.
 const ELK_ESM_URL = "https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk/+esm";
+
+// Pure: rewrite jsDelivr's root-relative imports ("/npm/…") to absolute CDN
+// URLs. The ELK bundle lazily imports its render chunk via "/npm/…"; from a blob
+// URL (no origin) that path can't resolve, so it must be made absolute. Nested
+// chunks are then fetched over https and resolve their own "/npm/…" against the
+// jsDelivr origin automatically.
+export function rewriteRootImports(source: string): string {
+	return source.replace(
+		/(['"])\/npm\//g,
+		(_, q: string) => `${q}https://cdn.jsdelivr.net/npm/`,
+	);
+}
 
 export async function fetchElkSource(): Promise<string> {
 	const response = await requestUrl(ELK_ESM_URL);
-	return response.text;
+	return rewriteRootImports(response.text);
 }
 
 // Import an ESM source string through a transient blob URL.
