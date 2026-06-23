@@ -18,7 +18,8 @@ export interface SnippetCategory {
 export const SNIPPET_CATEGORIES: SnippetCategory[] = [
 	{
 		name: "Flowchart",
-		scaffold: "flowchart TD\n  A[Start] --> B{Decision}\n  B -->|Yes| C[OK]\n  B -->|No| D[Stop]",
+		scaffold:
+			"flowchart TD\n  A[Start] --> B{Decision}\n  B -->|Yes| C[OK]\n  B -->|No| D[Stop]",
 		items: [
 			{ label: "Node", snippet: "id[Label]" },
 			{ label: "Round", snippet: "id(Label)" },
@@ -43,7 +44,10 @@ export const SNIPPET_CATEGORIES: SnippetCategory[] = [
 			{ label: "Activate", snippet: "activate A" },
 			{ label: "Note", snippet: "Note over A,B: text" },
 			{ label: "Loop", snippet: "loop every minute\n  A->>B: ping\nend" },
-			{ label: "Alt", snippet: "alt success\n  A->>B: ok\nelse failure\n  A->>B: no\nend" },
+			{
+				label: "Alt",
+				snippet: "alt success\n  A->>B: ok\nelse failure\n  A->>B: no\nend",
+			},
 		],
 	},
 	{

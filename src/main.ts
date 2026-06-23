@@ -19,10 +19,7 @@ import {
 	type MermaidDiskCache,
 } from "./mermaid-loader";
 import { MERMAID_VIEW_TYPE, MermaidEditorView } from "./mermaid-view";
-import {
-	findAllMermaidBlocks,
-	findMermaidBlockAt,
-} from "./mermaid-block";
+import { findAllMermaidBlocks, findMermaidBlockAt } from "./mermaid-block";
 import { decorateDiagram } from "./mermaid-overlay";
 import {
 	MERMAID_FILE_EXTENSIONS,
@@ -257,9 +254,9 @@ export default class WonderPlugin extends Plugin {
 			try {
 				const targets: HTMLElement[] = [];
 				if (node.classList?.contains("mermaid")) targets.push(node);
-				node.querySelectorAll?.<HTMLElement>(".mermaid").forEach((n) =>
-					targets.push(n),
-				);
+				node
+					.querySelectorAll?.<HTMLElement>(".mermaid")
+					.forEach((n) => targets.push(n));
 				for (const el of targets) {
 					if (!inNote(el)) continue;
 					decorateDiagram(el, {
@@ -329,8 +326,9 @@ export default class WonderPlugin extends Plugin {
 	// matching document order of the source blocks.
 	private diagramIndex(el: HTMLElement): number {
 		const container =
-			el.closest(".markdown-preview-view, .markdown-source-view, .view-content") ??
-			document.body;
+			el.closest(
+				".markdown-preview-view, .markdown-source-view, .view-content",
+			) ?? document.body;
 		const all = Array.from(container.querySelectorAll<HTMLElement>(".mermaid"));
 		const idx = all.indexOf(el);
 		return idx < 0 ? 0 : idx;
@@ -406,9 +404,7 @@ export default class WonderPlugin extends Plugin {
 	// The CodeMirror editor of the active markdown note, if any. Used by the view
 	// to insert a diagram when it isn't bound to an existing block.
 	activeMarkdownEditor(): Editor | null {
-		return (
-			this.app.workspace.getActiveViewOfType(MarkdownView)?.editor ?? null
-		);
+		return this.app.workspace.getActiveViewOfType(MarkdownView)?.editor ?? null;
 	}
 
 	// Install the downloaded Mermaid as `window.mermaid` so every `mermaid` block

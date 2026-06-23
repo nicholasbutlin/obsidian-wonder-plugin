@@ -108,7 +108,10 @@ export class MermaidFileView extends TextFileView {
 		}
 		try {
 			const mermaid = await this.plugin.getMermaidInstance();
-			const { svg } = await mermaid.render(createMermaidId("wonder-mmd"), source);
+			const { svg } = await mermaid.render(
+				createMermaidId("wonder-mmd"),
+				source,
+			);
 			if (seq !== this.renderSeq) return;
 			const doc = new DOMParser().parseFromString(
 				`<body>${svg}</body>`,

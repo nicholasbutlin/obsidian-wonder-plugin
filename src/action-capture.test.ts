@@ -19,9 +19,7 @@ describe("captureActions", () => {
 		);
 
 		expect(rewritten).toContain("**[[ToDo Auto#ToDo|ACTION]]:** call Bob");
-		expect(rewritten).toContain(
-			"**[[ToDo Auto#ToDo|ACTION]]:** email Alice",
-		);
+		expect(rewritten).toContain("**[[ToDo Auto#ToDo|ACTION]]:** email Alice");
 		expect(rewritten).not.toContain("@action");
 		expect(rewritten).not.toContain("#^");
 
