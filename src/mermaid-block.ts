@@ -20,6 +20,12 @@ export interface MermaidBlock {
 // by the same marker type and length (CommonMark allows a longer closing run).
 const OPEN_FENCE = /^(\s*)(`{3,}|~{3,})\s*mermaid\s*$/i;
 
+// Whether a line opens a mermaid fenced block. Used to confirm a section is a
+// mermaid block when binding the editor by line number.
+export function isMermaidFenceLine(line: string): boolean {
+	return OPEN_FENCE.test(line);
+}
+
 function closeFenceRe(indent: string, marker: string): RegExp {
 	const ch = marker[0] === "`" ? "`" : "~";
 	return new RegExp(`^\\s*${ch}{${marker.length},}\\s*$`);

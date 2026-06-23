@@ -1,5 +1,6 @@
 import {
 	Editor,
+	MarkdownPostProcessorContext,
 	MarkdownView,
 	Notice,
 	Plugin,
@@ -19,7 +20,11 @@ import {
 	type MermaidDiskCache,
 } from "./mermaid-loader";
 import { MERMAID_VIEW_TYPE, MermaidEditorView } from "./mermaid-view";
-import { findAllMermaidBlocks, findMermaidBlockAt } from "./mermaid-block";
+import {
+	findAllMermaidBlocks,
+	findMermaidBlockAt,
+	isMermaidFenceLine,
+} from "./mermaid-block";
 import { decorateDiagram } from "./mermaid-overlay";
 import {
 	MERMAID_FILE_EXTENSIONS,
@@ -109,6 +114,12 @@ export default class WonderPlugin extends Plugin {
 		// post-processor frequently sees no `.mermaid` element yet.
 		if (this.settings.mermaidDiagramTools) {
 			this.app.workspace.onLayoutReady(() => this.startDiagramDecoration());
+			// Separately, a post-processor stamps each mermaid block's source line
+			// onto its element. getSectionInfo is reliable here even though the SVG
+			// isn't rendered yet, so the edit button can bind to the exact block.
+			this.registerMarkdownPostProcessor((el, ctx) =>
+				this.stampMermaidLine(el, ctx),
+			);
 		}
 
 		// "New Mermaid file" in the folder context menu.
@@ -285,20 +296,42 @@ export default class WonderPlugin extends Plugin {
 			.forEach((el) => decorate(el));
 	}
 
-	// Resolve a clicked diagram's source block by its position among the rendered
-	// diagrams of its note, then open the editor bound to it. Position mapping is
-	// used because a rendered SVG carries no link back to its source lines.
+	// Stamp a mermaid code block's source line onto its rendered element, so the
+	// edit button binds to the exact block. getSectionInfo gives the block's line
+	// range reliably (even before the SVG renders); we confirm it's a mermaid
+	// block by checking its opening fence in the document text.
+	private stampMermaidLine(
+		el: HTMLElement,
+		ctx: MarkdownPostProcessorContext,
+	): void {
+		const info = ctx.getSectionInfo(el);
+		if (!info) return;
+		const lines = info.text.split("\n");
+		if (!isMermaidFenceLine(lines[info.lineStart] ?? "")) return;
+		el.dataset.wonderMermaidLine = String(info.lineStart);
+	}
+
+	// Open the editor bound to a clicked diagram's source block. Binding is by the
+	// exact line stamped on the block (see stampMermaidLine); if that's missing,
+	// fall back to the diagram's position among the note's blocks.
 	private editDiagramElement(el: HTMLElement): void {
 		const file = this.fileForElement(el) ?? this.app.workspace.getActiveFile();
 		if (!(file instanceof TFile)) {
 			new Notice("Wonder: couldn't find the note for this diagram.");
 			return;
 		}
-		const index = this.diagramIndex(el);
+		const stamped = el.closest<HTMLElement>("[data-wonder-mermaid-line]");
+		const stampedLine = stamped?.dataset.wonderMermaidLine;
 		void (async () => {
 			const content = await this.app.vault.read(file);
-			const blocks = findAllMermaidBlocks(content);
-			const block = blocks[index] ?? blocks[0];
+			let block =
+				stampedLine != null
+					? findMermaidBlockAt(content, parseInt(stampedLine, 10))
+					: null;
+			if (!block) {
+				const blocks = findAllMermaidBlocks(content);
+				block = blocks[this.diagramIndex(el)] ?? blocks[0] ?? null;
+			}
 			if (!block) {
 				new Notice("Wonder: couldn't find the diagram source.");
 				return;
