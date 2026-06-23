@@ -1,3 +1,10 @@
+## [1.8.1](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.8.0...1.8.1) (2026-06-23)
+
+
+### Bug Fixes
+
+* show diagram edit button reliably and fix ELK CDN loading ([38c9974](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/38c9974bfd8a68029ae6a43753ac0b5fae68abbc))
+
 # [1.8.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.7.0...1.8.0) (2026-06-23)
 
 
