@@ -311,23 +311,25 @@ export default class WonderPlugin extends Plugin {
 		el.dataset.wonderMermaidLine = String(info.lineStart);
 	}
 
-	// Open the editor bound to a clicked diagram's source block. Binding is by the
-	// exact line stamped on the block (see stampMermaidLine); if that's missing,
-	// fall back to the diagram's position among the note's blocks.
+	// Open the editor bound to a clicked diagram's source block. The diagram's
+	// source line is resolved per view mode, since a rendered SVG has no link back
+	// to its source:
+	//  - Live Preview / source: ask CodeMirror for the element's document position
+	//    (posAtDOM), which is exact even though CM only renders visible widgets.
+	//  - Reading view: use the line stamped by the post-processor.
+	//  - Last resort: the diagram's position among the note's blocks (reliable
+	//    only in reading view, where every block is rendered in order).
 	private editDiagramElement(el: HTMLElement): void {
-		const file = this.fileForElement(el) ?? this.app.workspace.getActiveFile();
+		const view = this.viewForElement(el);
+		const file = view?.file ?? this.app.workspace.getActiveFile();
 		if (!(file instanceof TFile)) {
 			new Notice("Wonder: couldn't find the note for this diagram.");
 			return;
 		}
-		const stamped = el.closest<HTMLElement>("[data-wonder-mermaid-line]");
-		const stampedLine = stamped?.dataset.wonderMermaidLine;
 		void (async () => {
 			const content = await this.app.vault.read(file);
-			let block =
-				stampedLine != null
-					? findMermaidBlockAt(content, parseInt(stampedLine, 10))
-					: null;
+			const line = this.lineFromEditor(view, el) ?? this.lineFromStamp(el);
+			let block = line != null ? findMermaidBlockAt(content, line) : null;
 			if (!block) {
 				const blocks = findAllMermaidBlocks(content);
 				block = blocks[this.diagramIndex(el)] ?? blocks[0] ?? null;
@@ -344,23 +346,49 @@ export default class WonderPlugin extends Plugin {
 		})();
 	}
 
-	// The file backing the workspace leaf that contains this element.
-	private fileForElement(el: HTMLElement): TFile | null {
+	// In Live Preview / source mode the diagram is a CodeMirror widget; map its
+	// DOM node back to a document line via the editor. Returns null in reading
+	// view (no editor) or if the position can't be resolved.
+	private lineFromEditor(
+		view: MarkdownView | null,
+		el: HTMLElement,
+	): number | null {
+		const cm = (
+			view?.editor as unknown as { cm?: { posAtDOM(n: Node): number } }
+		)?.cm;
+		if (!cm || !view) return null;
+		try {
+			return view.editor.offsetToPos(cm.posAtDOM(el)).line;
+		} catch {
+			return null;
+		}
+	}
+
+	// In reading view, the post-processor stamps each block's source line onto its
+	// element (see stampMermaidLine); read the nearest stamped ancestor.
+	private lineFromStamp(el: HTMLElement): number | null {
+		const stamped = el.closest<HTMLElement>("[data-wonder-mermaid-line]");
+		const value = stamped?.dataset.wonderMermaidLine;
+		return value != null ? parseInt(value, 10) : null;
+	}
+
+	// The markdown view whose container holds this element.
+	private viewForElement(el: HTMLElement): MarkdownView | null {
 		for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
 			const view = leaf.view;
 			if (view instanceof MarkdownView && view.containerEl.contains(el)) {
-				return view.file ?? null;
+				return view;
 			}
 		}
 		return null;
 	}
 
 	// This diagram's index among all rendered diagrams in its scroll container,
-	// matching document order of the source blocks.
+	// matching document order of the source blocks. Reliable only in reading view.
 	private diagramIndex(el: HTMLElement): number {
 		const container =
 			el.closest(
-				".markdown-preview-view, .markdown-source-view, .view-content",
+				".markdown-preview-view, .markdown-reading-view, .view-content",
 			) ?? document.body;
 		const all = Array.from(container.querySelectorAll<HTMLElement>(".mermaid"));
 		const idx = all.indexOf(el);
