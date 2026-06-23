@@ -31,6 +31,8 @@ function attach(
 ): void {
 	container.addClass("wonder-mermaid-decorated");
 
+	// Toolbar is appended last so the SVG stays the container's firstChild —
+	// Obsidian's Mermaid renderer reads firstChild when it re-renders a block.
 	const toolbar = container.createDiv({ cls: "wonder-mermaid-overlay" });
 	if (opts.onEdit) {
 		const editBtn = toolbar.createEl("button", {
@@ -104,8 +106,10 @@ function whenSvgReady(
 	window.setTimeout(() => observer.disconnect(), timeoutMs);
 }
 
-// Minimal wheel-zoom + drag-pan over an SVG, applied as a CSS transform on a
-// wrapper so the diagram's own coordinates are untouched.
+// Minimal wheel-zoom + drag-pan over a diagram. The transform is applied
+// directly to the SVG in place — the DOM is never restructured, so Obsidian's
+// own Mermaid rendering (which reads/replaces the container's children) is
+// undisturbed.
 class PanZoom {
 	private scale = 1;
 	private tx = 0;
@@ -113,16 +117,12 @@ class PanZoom {
 	private panning = false;
 	private startX = 0;
 	private startY = 0;
-	private readonly target: HTMLElement;
 
 	constructor(
 		private container: HTMLElement,
-		svg: SVGElement,
+		private target: SVGElement,
 	) {
-		// Wrap the SVG so the transform doesn't fight Mermaid's own sizing.
-		const wrapper = container.createDiv({ cls: "wonder-mermaid-zoom" });
-		wrapper.appendChild(svg);
-		this.target = wrapper;
+		target.style.transformOrigin = "0 0";
 
 		container.addEventListener("wheel", (e) => this.onWheel(e), {
 			passive: false,

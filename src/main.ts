@@ -240,17 +240,31 @@ export default class WonderPlugin extends Plugin {
 	// asynchronously, so an observer catches them reliably where a post-processor
 	// would race the render.
 	private startDiagramDecoration(): void {
-		const decorate = (node: HTMLElement) => {
-			const targets: HTMLElement[] = [];
-			if (node.classList?.contains("mermaid")) targets.push(node);
-			node.querySelectorAll?.<HTMLElement>(".mermaid").forEach((n) =>
-				targets.push(n),
+		// A rendered note diagram lives inside a markdown view. Mermaid also
+		// appends transient measuring nodes to <body> during render() — decorating
+		// those would reparent/observe Mermaid's own scratch DOM and break the
+		// render ("Cannot read properties of null"). The ancestor check skips them.
+		const inNote = (el: HTMLElement): boolean =>
+			!!el.closest(
+				".markdown-preview-view, .markdown-reading-view, .markdown-source-view, .cm-editor",
 			);
-			for (const el of targets) {
-				decorateDiagram(el, {
-					enableZoom: true,
-					onEdit: () => this.editDiagramElement(el),
-				});
+
+		const decorate = (node: HTMLElement) => {
+			try {
+				const targets: HTMLElement[] = [];
+				if (node.classList?.contains("mermaid")) targets.push(node);
+				node.querySelectorAll?.<HTMLElement>(".mermaid").forEach((n) =>
+					targets.push(n),
+				);
+				for (const el of targets) {
+					if (!inNote(el)) continue;
+					decorateDiagram(el, {
+						enableZoom: true,
+						onEdit: () => this.editDiagramElement(el),
+					});
+				}
+			} catch {
+				// Never let decoration throw into the observer / Mermaid's render.
 			}
 		};
 

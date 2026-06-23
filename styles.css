@@ -132,11 +132,6 @@
 	overflow: hidden;
 }
 
-.wonder-mermaid-zoom {
-	transform-origin: 0 0;
-	transition: transform 0.05s linear;
-}
-
 .wonder-mermaid-panning {
 	cursor: grabbing;
 }
