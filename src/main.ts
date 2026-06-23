@@ -1,8 +1,33 @@
-import { Editor, Notice, Plugin, TAbstractFile, TFile } from "obsidian";
+import {
+	Editor,
+	MarkdownView,
+	Notice,
+	Plugin,
+	TAbstractFile,
+	TFile,
+	loadMermaid,
+} from "obsidian";
 import { WonderSettings, DEFAULT_SETTINGS, WonderSettingTab } from "./settings";
 import { ActionProcessor } from "./action-processor";
 import { DateNormalizer } from "./date-bridge";
 import { buildContextBlock, upsertContextSection } from "./context-section";
+import {
+	getMermaid,
+	resetMermaidCache,
+	type MermaidAPI,
+	type MermaidDiskCache,
+} from "./mermaid-loader";
+import { MERMAID_VIEW_TYPE, MermaidEditorView } from "./mermaid-view";
+import { findMermaidBlockAt } from "./mermaid-block";
+
+// Marks a `window.mermaid` we installed, so we know whether to restore Obsidian's
+// original on unload and don't re-stash our own as the "original".
+const OWNED_BY_WONDER = Symbol("wonder.mermaid.owned");
+
+type WindowWithMermaid = Window & {
+	mermaid?: MermaidAPI & { [OWNED_BY_WONDER]?: true };
+	obsidian_mermaid?: MermaidAPI;
+};
 
 // This is the main plugin class
 export default class WonderPlugin extends Plugin {
@@ -21,11 +46,44 @@ export default class WonderPlugin extends Plugin {
 	// Kanban save has momentarily invalidated the metadata cache.
 	private knownBoards = new Set<string>();
 
+	// Disk cache for the downloaded CDN Mermaid, backed by plugin settings so a
+	// downloaded version survives reloads.
+	readonly mermaidDiskCache: MermaidDiskCache = {
+		read: async () => this.settings.mermaidCdnCache,
+		write: async (value) => {
+			this.settings.mermaidCdnCache = value;
+			await this.saveSettings();
+		},
+	};
+
 	async onload() {
 		await this.loadSettings();
 
 		this.actionProcessor = new ActionProcessor(this);
 		this.dateNormalizer = new DateNormalizer(this);
+
+		this.registerView(
+			MERMAID_VIEW_TYPE,
+			(leaf) => new MermaidEditorView(leaf, this),
+		);
+		this.addRibbonIcon("git-fork", "Open Mermaid editor", () =>
+			this.openMermaidEditor(),
+		);
+		this.addCommand({
+			id: "open-mermaid-editor",
+			name: "Open Mermaid editor",
+			callback: () => this.openMermaidEditor(),
+		});
+		this.addCommand({
+			id: "edit-mermaid-block",
+			name: "Edit Mermaid block at cursor",
+			editorCallback: (editor) => this.editMermaidBlockAtCursor(editor),
+		});
+
+		// Replace Obsidian's built-in Mermaid with the downloaded version (no-op
+		// until a version is downloaded). Deferred to layout-ready so the built-in
+		// is available to stash as the fallback.
+		this.app.workspace.onLayoutReady(() => void this.syncMermaidGlobal());
 
 		this.app.workspace.onLayoutReady(() => this.indexBoards());
 
@@ -80,6 +138,92 @@ export default class WonderPlugin extends Plugin {
 			clearTimeout(timer);
 		}
 		this.scanTimers.clear();
+
+		// Hand Mermaid back to Obsidian if we took it over.
+		if (typeof window !== "undefined") {
+			const win = window as WindowWithMermaid;
+			if (win.mermaid?.[OWNED_BY_WONDER] && win.obsidian_mermaid) {
+				win.mermaid = win.obsidian_mermaid;
+			}
+		}
+		resetMermaidCache();
+	}
+
+	// Open (or reveal) the Mermaid editor in the right sidebar.
+	private async openMermaidEditor(seed?: {
+		source: string;
+		file: TFile;
+		anchorLine: number;
+	}): Promise<void> {
+		const { workspace } = this.app;
+		let leaf = workspace.getLeavesOfType(MERMAID_VIEW_TYPE)[0];
+		if (!leaf) {
+			leaf = workspace.getRightLeaf(false) ?? workspace.getLeaf(true);
+			await leaf.setViewState({ type: MERMAID_VIEW_TYPE, active: true });
+		}
+		await workspace.revealLeaf(leaf);
+		if (seed) {
+			const view = leaf.view;
+			if (view instanceof MermaidEditorView) {
+				view.setDiagram(seed.source, {
+					file: seed.file,
+					anchorLine: seed.anchorLine,
+				});
+			}
+		}
+	}
+
+	// Open the editor seeded from the `mermaid` block under the cursor, bound so
+	// edits can be written back to that block.
+	private editMermaidBlockAtCursor(editor: Editor): void {
+		const file = this.app.workspace.getActiveFile();
+		if (!file) return;
+		const line = editor.getCursor().line;
+		const block = findMermaidBlockAt(editor.getValue(), line);
+		if (!block) {
+			new Notice("Wonder: no Mermaid block at the cursor.");
+			return;
+		}
+		void this.openMermaidEditor({
+			source: block.body,
+			file,
+			anchorLine: block.startLine,
+		});
+	}
+
+	// The CodeMirror editor of the active markdown note, if any. Used by the view
+	// to insert a diagram when it isn't bound to an existing block.
+	activeMarkdownEditor(): Editor | null {
+		return (
+			this.app.workspace.getActiveViewOfType(MarkdownView)?.editor ?? null
+		);
+	}
+
+	// Install the downloaded Mermaid as `window.mermaid` so every `mermaid` block
+	// across Obsidian renders with it. With no download cached this restores the
+	// built-in, so the swap is a safe no-op until the user opts in via a download.
+	async syncMermaidGlobal(): Promise<void> {
+		const win = window as WindowWithMermaid;
+		// Stash Obsidian's original exactly once, before we overwrite it.
+		if (!win.mermaid?.[OWNED_BY_WONDER]) {
+			win.obsidian_mermaid =
+				win.mermaid ?? ((await loadMermaid()) as MermaidAPI);
+		}
+		if (this.settings.mermaidCdnCache) {
+			const mermaid = await getMermaid(
+				this.mermaidDiskCache,
+				this.settings.mermaidUseObsidianTheme,
+				this.settings.mermaidUseElk,
+				this.settings.mermaidUseHandDrawn,
+			);
+			const owned = mermaid as MermaidAPI & { [OWNED_BY_WONDER]?: true };
+			owned[OWNED_BY_WONDER] = true;
+			win.mermaid = owned;
+		} else if (win.obsidian_mermaid) {
+			// Nothing downloaded (or cache cleared): hand back to the built-in.
+			win.mermaid = win.obsidian_mermaid;
+			resetMermaidCache();
+		}
 	}
 
 	// Debounce a modified file's scan so a burst of edits triggers one run once

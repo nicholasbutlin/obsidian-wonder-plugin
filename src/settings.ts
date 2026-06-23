@@ -1,5 +1,10 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import WonderPlugin from "./main";
+import {
+	fetchElkSource,
+	fetchMermaidSource,
+	type MermaidCdnCache,
+} from "./mermaid-loader";
 
 export interface WonderSettings {
 	dateFormat: string;
@@ -12,6 +17,14 @@ export interface WonderSettings {
 	// The "Refresh Context" command's heading and Tasks query (template string).
 	contextHeading: string;
 	contextQuery: string;
+	// Mermaid rendering: the version to fetch from CDN and the render toggles.
+	// `mermaidCdnCache` holds the downloaded source so it survives reloads; null
+	// means "use Obsidian's built-in Mermaid".
+	mermaidVersion: string;
+	mermaidUseObsidianTheme: boolean;
+	mermaidUseElk: boolean;
+	mermaidUseHandDrawn: boolean;
+	mermaidCdnCache: MermaidCdnCache | null;
 }
 
 export const DEFAULT_SETTINGS: WonderSettings = {
@@ -23,6 +36,11 @@ export const DEFAULT_SETTINGS: WonderSettings = {
 	contextHeading: "Context",
 	contextQuery:
 		"not done\n(due before tomorrow) OR (happens today)\nsort by priority",
+	mermaidVersion: "latest",
+	mermaidUseObsidianTheme: true,
+	mermaidUseElk: true,
+	mermaidUseHandDrawn: false,
+	mermaidCdnCache: null,
 };
 
 // The Kanban setting stores a vault-relative name without extension; the file
@@ -118,6 +136,133 @@ export class WonderSettingTab extends PluginSettingTab {
 				this.plugin.settings.contextQuery = value;
 			},
 		);
+
+		this.displayMermaid();
+	}
+
+	// Mermaid rendering settings: choose a CDN version, download it (so all
+	// `mermaid` blocks render with it), and tune the render options.
+	private displayMermaid(): void {
+		const s = this.plugin.settings;
+
+		new Setting(this.containerEl).setName("Mermaid").setHeading();
+
+		new Setting(this.containerEl)
+			.setName("Version")
+			.setDesc(
+				'CDN version to fetch — a version number or "latest". Download it below to take effect.',
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder(DEFAULT_SETTINGS.mermaidVersion)
+					.setValue(s.mermaidVersion)
+					.onChange(async (value) => {
+						s.mermaidVersion = value.trim() || DEFAULT_SETTINGS.mermaidVersion;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		const cache = s.mermaidCdnCache;
+		const cacheSetting = new Setting(this.containerEl)
+			.setName("Downloaded Mermaid")
+			.setDesc(
+				cache
+					? `Cached: ${cache.version}${cache.elk ? " (with ELK)" : ""}. All mermaid blocks render with this version.`
+					: "Nothing downloaded — using Obsidian's built-in Mermaid.",
+			);
+
+		if (cache) {
+			cacheSetting.addButton((btn) =>
+				btn.setButtonText("Clear").onClick(async () => {
+					s.mermaidCdnCache = null;
+					await this.plugin.saveSettings();
+					await this.plugin.syncMermaidGlobal();
+					this.display();
+				}),
+			);
+		} else {
+			cacheSetting.addButton((btn) =>
+				btn
+					.setButtonText("Download")
+					.setCta()
+					.onClick(() => {
+						btn.setDisabled(true);
+						btn.setButtonText("Downloading…");
+						void (async () => {
+							try {
+								const source = await fetchMermaidSource(s.mermaidVersion);
+								// ELK is best-effort: a failure here shouldn't block the
+								// core download.
+								let elk: string | undefined;
+								try {
+									elk = await fetchElkSource();
+								} catch {
+									elk = undefined;
+								}
+								s.mermaidCdnCache = {
+									version: s.mermaidVersion,
+									source,
+									elk,
+								};
+								await this.plugin.saveSettings();
+								await this.plugin.syncMermaidGlobal();
+								this.display();
+							} catch (err) {
+								btn.setDisabled(false);
+								btn.setButtonText("Download");
+								cacheSetting.setDesc(
+									`Download failed: ${err instanceof Error ? err.message : String(err)}`,
+								);
+							}
+						})();
+					}),
+			);
+		}
+
+		this.addMermaidToggle(
+			"Obsidian theme integration",
+			"Diagrams follow the active Obsidian theme. When off, Mermaid uses its default theme.",
+			s.mermaidUseObsidianTheme,
+			(value) => {
+				s.mermaidUseObsidianTheme = value;
+			},
+		);
+		this.addMermaidToggle(
+			"ELK layout engine",
+			"Use ELK as the layout engine — better results for complex flowcharts and graphs.",
+			s.mermaidUseElk,
+			(value) => {
+				s.mermaidUseElk = value;
+			},
+		);
+		this.addMermaidToggle(
+			"Hand-drawn look",
+			"Render diagrams with a sketched, hand-drawn style.",
+			s.mermaidUseHandDrawn,
+			(value) => {
+				s.mermaidUseHandDrawn = value;
+			},
+		);
+	}
+
+	// A toggle that, after saving, re-syncs the global Mermaid instance so open
+	// notes re-render with the new option on next paint.
+	private addMermaidToggle(
+		name: string,
+		desc: string,
+		value: boolean,
+		apply: (value: boolean) => void,
+	): void {
+		new Setting(this.containerEl)
+			.setName(name)
+			.setDesc(desc)
+			.addToggle((toggle) =>
+				toggle.setValue(value).onChange(async (value) => {
+					apply(value);
+					await this.plugin.saveSettings();
+					await this.plugin.syncMermaidGlobal();
+				}),
+			);
 	}
 
 	private addTextAreaSetting(

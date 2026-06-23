@@ -1,8 +1,66 @@
-/*
+/* Wonder plugin styles. */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+/* Live Mermaid editor (side-panel ItemView). */
+.wonder-mermaid-editor {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	padding: 0;
+}
 
-If your plugin does not need CSS, delete this file.
+.wonder-mermaid-toolbar {
+	display: flex;
+	gap: var(--size-4-2);
+	padding: var(--size-4-2);
+	border-bottom: 1px solid var(--background-modifier-border);
+}
 
-*/
+.wonder-mermaid-writeback {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-4-1);
+	cursor: pointer;
+}
+
+.wonder-mermaid-body {
+	display: flex;
+	flex: 1;
+	min-height: 0;
+	flex-direction: column;
+}
+
+.wonder-mermaid-source {
+	flex: 0 0 40%;
+	width: 100%;
+	resize: vertical;
+	border: none;
+	border-bottom: 1px solid var(--background-modifier-border);
+	border-radius: 0;
+	padding: var(--size-4-2);
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-small);
+	background: var(--background-primary);
+	color: var(--text-normal);
+}
+
+.wonder-mermaid-preview {
+	flex: 1;
+	min-height: 0;
+	overflow: auto;
+	padding: var(--size-4-3);
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+}
+
+.wonder-mermaid-preview svg {
+	max-width: 100%;
+	height: auto;
+}
+
+.wonder-mermaid-error {
+	color: var(--text-error);
+	white-space: pre-wrap;
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-small);
+}
