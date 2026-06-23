@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.7.0...1.8.0) (2026-06-23)
+
+
+### Features
+
+* edit diagrams in place, snippet palette, pan/zoom, .mermaid files ([7794f77](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/7794f77c4ea9f37028b8efc41757ffa7500fa814))
+
 # [1.7.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.6.1...1.7.0) (2026-06-23)
 
 
