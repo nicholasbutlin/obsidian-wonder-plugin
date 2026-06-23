@@ -1,3 +1,10 @@
+## [1.8.5](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.8.4...1.8.5) (2026-06-23)
+
+
+### Bug Fixes
+
+* bind edit button to the clicked diagram in Live Preview ([f578f76](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/f578f763f9596248e3977913c5d90ea7461b7f7d))
+
 ## [1.8.4](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.8.3...1.8.4) (2026-06-23)
 
 
