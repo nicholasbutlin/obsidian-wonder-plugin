@@ -21,14 +21,7 @@ export function formatDone(date: string): string {
 	return `${DONE_EMOJI} ${date}`;
 }
 
-// A new, uncompleted task line filed on the board: checkbox, description, and a
-// hidden created-date stamp.
-export function newTask({
-	text,
-	created,
-}: {
-	text: string;
-	created: string;
-}): string {
-	return `- [ ] ${text.trim()} ${formatHiddenCreated(created)}`;
+// A new, uncompleted task line filed on the board: checkbox and description.
+export function newTask({ text }: { text: string }): string {
+	return `- [ ] ${text.trim()}`;
 }

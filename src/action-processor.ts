@@ -9,26 +9,15 @@ import {
 	type CapturedAction,
 } from "./action-capture";
 
-function todayIso(): string {
-	return window.moment().format("YYYY-MM-DD");
-}
-
 // Obsidian adapter around the pure action-capture domain: reads the note and
 // board, applies the transform atomically, and files the captured tasks.
 export class ActionProcessor {
 	plugin: WonderPlugin;
 	app: App;
 
-	// Injectable so tests can assert against a deterministic date.
-	private today: () => string;
-
-	constructor(
-		plugin: WonderPlugin,
-		today: () => string = todayIso,
-	) {
+	constructor(plugin: WonderPlugin) {
 		this.plugin = plugin;
 		this.app = plugin.app;
-		this.today = today;
 	}
 
 	async processActionMarkers(file: TFile) {
@@ -58,7 +47,6 @@ export class ActionProcessor {
 			const result = captureActions(data, {
 				kanbanFile,
 				noteBasename: file.basename,
-				today: this.today,
 			});
 			captured = result.captured;
 			return result.rewritten;

@@ -19,7 +19,6 @@ export interface CapturedAction {
 export interface CaptureContext {
 	kanbanFile: string;
 	noteBasename: string;
-	today: () => string;
 }
 
 // Pure: rewrite every @action marker in a note to an ACTION link, and return the
@@ -37,7 +36,6 @@ export function captureActions(
 		const actionText = rawText.trim();
 		const task = newTask({
 			text: `${actionText} [[${ctx.noteBasename}]]`,
-			created: ctx.today(),
 		});
 		captured.push({
 			text: actionText,

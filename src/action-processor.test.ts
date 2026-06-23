@@ -41,8 +41,7 @@ function makeProcessor(vault: FakeVault): ActionProcessor {
 		app: { vault },
 		settings: { kanbanFile: "ToDo Auto" },
 	};
-	// A fixed "today" keeps assertions stable.
-	return new ActionProcessor(plugin as never, () => "2026-06-18");
+	return new ActionProcessor(plugin as never);
 }
 
 describe("ActionProcessor.processActionMarkers", () => {
@@ -67,12 +66,8 @@ describe("ActionProcessor.processActionMarkers", () => {
 		expect(noteOut).not.toContain("#^");
 
 		// Both actions are filed as canonical Tasks lines with inline backlinks.
-		expect(kanbanOut).toContain(
-			"- [ ] call Bob [[Note]] <!-- ➕ 2026-06-18 -->",
-		);
-		expect(kanbanOut).toContain(
-			"- [ ] email Alice [[Note]] <!-- ➕ 2026-06-18 -->",
-		);
+		expect(kanbanOut).toContain("- [ ] call Bob [[Note]]");
+		expect(kanbanOut).toContain("- [ ] email Alice [[Note]]");
 		expect(kanbanOut).not.toContain("^");
 	});
 

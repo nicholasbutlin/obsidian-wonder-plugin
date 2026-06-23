@@ -24,18 +24,11 @@ describe("task-format vocabulary", () => {
 		expect(formatDone("2026-06-19")).toBe("✅ 2026-06-19");
 	});
 
-	it("builds a canonical open task line with a created stamp", () => {
-		expect(
-			newTask({ text: "call Bob", created: "2026-06-18" }),
-		).toBe("- [ ] call Bob <!-- ➕ 2026-06-18 -->");
+	it("builds a canonical open task line", () => {
+		expect(newTask({ text: "call Bob" })).toBe("- [ ] call Bob");
 	});
 
 	it("trims surrounding whitespace from the task description", () => {
-		expect(
-			newTask({
-				text: "  email Alice  ",
-				created: "2026-06-18",
-			}),
-		).toBe("- [ ] email Alice <!-- ➕ 2026-06-18 -->");
+		expect(newTask({ text: "  email Alice  " })).toBe("- [ ] email Alice");
 	});
 });

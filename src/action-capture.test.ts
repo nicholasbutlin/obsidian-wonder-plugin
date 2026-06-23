@@ -9,7 +9,6 @@ import {
 const opts = {
 	kanbanFile: "ToDo Auto",
 	noteBasename: "Note",
-	today: () => "2026-06-18",
 };
 
 describe("captureActions", () => {
@@ -29,7 +28,7 @@ describe("captureActions", () => {
 		expect(captured).toHaveLength(2);
 		expect(captured[0]).toEqual({
 			text: "call Bob",
-			entry: "- [ ] call Bob [[Note]] <!-- ➕ 2026-06-18 -->",
+			entry: "- [ ] call Bob [[Note]]",
 		});
 	});
 
