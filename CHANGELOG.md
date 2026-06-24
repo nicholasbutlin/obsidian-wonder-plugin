@@ -1,3 +1,10 @@
+## [1.8.6](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.8.5...1.8.6) (2026-06-24)
+
+
+### Bug Fixes
+
+* keep note scroll position while editing a diagram ([170e61d](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/170e61d90afb2bded65b38d44c0bd2e52858fa7f))
+
 ## [1.8.5](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.8.4...1.8.5) (2026-06-23)
 
 
