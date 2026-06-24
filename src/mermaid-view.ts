@@ -1,7 +1,18 @@
-import { ItemView, Notice, TFile, WorkspaceLeaf, setIcon } from "obsidian";
+import {
+	Editor,
+	ItemView,
+	MarkdownView,
+	Notice,
+	TFile,
+	WorkspaceLeaf,
+	setIcon,
+} from "obsidian";
 import WonderPlugin from "./main";
 import { findMermaidBlockAt, replaceBlockBody } from "./mermaid-block";
 import { SNIPPET_CATEGORIES } from "./mermaid-snippets";
+
+// A closing fence line: 3+ backticks/tildes, optionally indented, nothing else.
+const CLOSING_FENCE = /^[ \t]*(`{3,}|~{3,})[ \t]*$/;
 
 export const MERMAID_VIEW_TYPE = "wonder-mermaid-editor";
 
@@ -104,15 +115,84 @@ export class MermaidEditorView extends ItemView {
 	}
 
 	// Rewrite the bound block with the current source so the note re-renders.
+	// Write the edited source back to the bound block. Two things keep the note
+	// from jumping to the top while typing:
+	//  1. When the note is open, edit it in place via the editor (a localized
+	//     replaceRange), not a full vault rewrite — the latter is seen as an
+	//     external change and reloads the view.
+	//  2. Capture the view's scroll before the write and restore it afterwards
+	//     (across a couple of frames), since the diagram re-render can still nudge
+	//     the viewport.
 	private async writeBack(): Promise<void> {
 		if (!this.binding) return;
 		const { file, anchorLine } = this.binding;
 		const source = this.textarea.value.replace(/\s+$/, "");
+		const view = this.markdownViewForFile(file);
+		const restoreScroll = this.scrollKeeper(view);
+
+		if (view && this.replaceBodyInEditor(view.editor, anchorLine, source)) {
+			restoreScroll();
+			return;
+		}
+
+		// Fallback (note not open in an editor, or an unusual/unclosed block).
 		await this.plugin.app.vault.process(file, (data) => {
 			const block = findMermaidBlockAt(data, anchorLine);
 			if (!block) return data; // block moved/removed; leave the note untouched
 			return replaceBlockBody(data, block, source);
 		});
+		restoreScroll();
+	}
+
+	// The markdown view for a file currently open in a leaf, if any.
+	private markdownViewForFile(file: TFile): MarkdownView | null {
+		for (const leaf of this.plugin.app.workspace.getLeavesOfType("markdown")) {
+			const view = leaf.view;
+			if (view instanceof MarkdownView && view.file?.path === file.path) {
+				return view;
+			}
+		}
+		return null;
+	}
+
+	// Snapshot a view's scroll position and return a function that restores it,
+	// re-applying across the next couple of frames so an async re-render can't
+	// leave the note scrolled to the top.
+	private scrollKeeper(view: MarkdownView | null): () => void {
+		const scroller = view?.contentEl.querySelector<HTMLElement>(
+			".cm-scroller, .markdown-preview-view",
+		);
+		if (!scroller) return () => {};
+		const { scrollTop, scrollLeft } = scroller;
+		return () => {
+			const restore = () => {
+				scroller.scrollTop = scrollTop;
+				scroller.scrollLeft = scrollLeft;
+			};
+			restore();
+			requestAnimationFrame(restore);
+			requestAnimationFrame(() => requestAnimationFrame(restore));
+		};
+	}
+
+	// Replace just the body of the bound block via the editor, leaving the fences
+	// (and the rest of the doc) untouched. Returns false for blocks we won't touch
+	// surgically (e.g. an unclosed fence), so the caller can fall back.
+	private replaceBodyInEditor(
+		editor: Editor,
+		anchorLine: number,
+		source: string,
+	): boolean {
+		const block = findMermaidBlockAt(editor.getValue(), anchorLine);
+		if (!block) return false;
+		const closed =
+			block.endLine > block.startLine &&
+			CLOSING_FENCE.test(editor.getLine(block.endLine));
+		if (!closed) return false;
+		const from = { line: block.startLine + 1, ch: 0 };
+		const to = { line: block.endLine, ch: 0 };
+		editor.replaceRange(source === "" ? "" : `${source}\n`, from, to);
+		return true;
 	}
 
 	private async insertIntoActiveNote(): Promise<void> {
