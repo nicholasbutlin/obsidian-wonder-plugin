@@ -1,3 +1,11 @@
+# [1.9.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.8.6...1.9.0) (2026-06-27)
+
+
+### Features
+
+* **git:** CLI adapter, history/commits services, and the Wonder Git panel ([56cd13f](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/56cd13f0286667084b5b61f7ddada0f5444116f3))
+* **git:** pure parsers for log, name-status and side-by-side diff ([078ab83](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/078ab83958d2bb1335f2f210d47acf3abe266dbb))
+
 ## [1.8.6](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.8.5...1.8.6) (2026-06-24)
 
 
