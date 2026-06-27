@@ -1,6 +1,7 @@
 import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
 import { DEFAULT_SETTINGS, type WonderSettings } from "../../settings";
 import { fetchMermaidSource } from "./mermaid-loader";
+import type { FrontmatterToggle } from "./frontmatter-toggle";
 import type { SettingsStore } from "../../ports/settings-store";
 import type { MermaidEnginePort } from "../../ports/mermaid-engine";
 
@@ -13,8 +14,13 @@ export class WonderSettingTab extends PluginSettingTab {
 		plugin: Plugin,
 		private store: SettingsStore<WonderSettings>,
 		private engine: MermaidEnginePort,
+		private frontmatter: FrontmatterToggle,
 	) {
 		super(app, plugin);
+	}
+
+	private addHeading(name: string): void {
+		new Setting(this.containerEl).setName(name).setHeading();
 	}
 
 	display(): void {
@@ -23,9 +29,11 @@ export class WonderSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
+		// ── Date heading ─────────────────────────────────────────────
+		this.addHeading("Date heading");
 		this.addTextSetting(
-			"Date Format",
-			"Desired date format.",
+			"Date format",
+			"Format for the date inserted by the Insert date heading editor menu.",
 			DEFAULT_SETTINGS.dateFormat,
 			settings.dateFormat,
 			(value) => {
@@ -33,26 +41,15 @@ export class WonderSettingTab extends PluginSettingTab {
 			},
 		);
 
+		// ── Kanban & actions ─────────────────────────────────────────
+		this.addHeading("Kanban & actions");
 		this.addTextSetting(
-			"Kanban Path",
-			"Path to the Kanban file.",
+			"Kanban path",
+			"Name of the Kanban note (without .md) that @action markers are routed to.",
 			DEFAULT_SETTINGS.kanbanFile,
 			settings.kanbanFile,
 			(value) => {
 				settings.kanbanFile = value;
-			},
-		);
-
-		this.addTextSetting(
-			"Date reconcile delay (seconds)",
-			"How long to wait after a board edit before normalizing Kanban dates.",
-			DEFAULT_SETTINGS.dateDebounceSeconds.toString(),
-			settings.dateDebounceSeconds.toString(),
-			(value) => {
-				const interval = parseInt(value, 10);
-				if (!isNaN(interval) && interval > 0) {
-					settings.dateDebounceSeconds = interval;
-				}
 			},
 		);
 
@@ -79,6 +76,21 @@ export class WonderSettingTab extends PluginSettingTab {
 		);
 
 		this.addTextSetting(
+			"Date reconcile delay (seconds)",
+			"How long to wait after a board edit before normalizing Kanban dates.",
+			DEFAULT_SETTINGS.dateDebounceSeconds.toString(),
+			settings.dateDebounceSeconds.toString(),
+			(value) => {
+				const interval = parseInt(value, 10);
+				if (!isNaN(interval) && interval > 0) {
+					settings.dateDebounceSeconds = interval;
+				}
+			},
+		);
+
+		// ── Context section ──────────────────────────────────────────
+		this.addHeading("Context section");
+		this.addTextSetting(
 			"Context heading",
 			"Heading for the section the Refresh Context command maintains.",
 			DEFAULT_SETTINGS.contextHeading,
@@ -98,7 +110,27 @@ export class WonderSettingTab extends PluginSettingTab {
 			},
 		);
 
+		// ── Frontmatter ──────────────────────────────────────────────
+		this.addHeading("Frontmatter");
+		new Setting(this.containerEl)
+			.setName("Show frontmatter")
+			.setDesc(
+				"Show YAML frontmatter / Properties across notes. Also toggled from the ribbon and the inline button under each note title. Per-note override: add `cssclasses: show-frontmatter`.",
+			)
+			.addToggle((toggle) =>
+				toggle.setValue(settings.showFrontmatter).onChange(async () => {
+					await this.frontmatter.toggle();
+				}),
+			);
+
+		// ── Mermaid ──────────────────────────────────────────────────
 		this.displayMermaid();
+
+		// ── Git history ──────────────────────────────────────────────
+		this.addHeading("Git history");
+		new Setting(this.containerEl).setDesc(
+			"Review per-file and per-commit diffs from the ribbon, the Open Git history command, or a note's right-click menu. Desktop only; no configuration needed.",
+		);
 	}
 
 	// Mermaid rendering settings: choose a CDN version, download it (so all
