@@ -1,3 +1,10 @@
+## [1.11.1](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.11.0...1.11.1) (2026-06-27)
+
+
+### Bug Fixes
+
+* stop duplicate frontmatter toggles and soften git-diff colors ([1991e8a](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/1991e8ac56f741f3ecf50e85316226230dcc9021))
+
 # [1.11.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.10.0...1.11.0) (2026-06-27)
 
 
