@@ -4,17 +4,20 @@ import {
 	MarkdownView,
 	Notice,
 	Plugin,
-	TAbstractFile,
 	TFile,
 	TFolder,
 	loadMermaid,
 } from "obsidian";
 import { WonderSettings, WonderSettingTab } from "./settings";
-import { DateNormalizer } from "./date-bridge";
 import { ObsidianVault } from "./adapters/obsidian/vault.adapter";
 import { ObsidianNotifier } from "./adapters/obsidian/notifier.adapter";
+import { ObsidianMetadata } from "./adapters/obsidian/metadata.adapter";
+import { ObsidianScheduler } from "./adapters/obsidian/scheduler.adapter";
+import { ObsidianWorkspace } from "./adapters/obsidian/workspace.adapter";
 import { ObsidianSettingsStore } from "./adapters/obsidian/settings-store.adapter";
 import { ActionCaptureService } from "./app/actions/action-capture.service";
+import { DateNormalizeService } from "./app/dates/date-normalize.service";
+import { ScanRouterService } from "./app/scan-router.service";
 import type { SettingsStore } from "./ports/settings-store";
 import { buildContextBlock, upsertContextSection } from "./core/context/section";
 import {
@@ -51,17 +54,7 @@ export default class WonderPlugin extends Plugin {
 	// constructor cannot initialize them.
 	settings!: WonderSettings;
 	settingsStore!: SettingsStore<WonderSettings>;
-	actionCapture!: ActionCaptureService;
-	dateNormalizer!: DateNormalizer;
-
-	// Pending scans, keyed by file path, so rapid edits to the same file
-	// collapse into a single run once editing settles.
-	private scanTimers = new Map<string, ReturnType<typeof setTimeout>>();
-
-	// Paths known to be Kanban boards. Seeded at load and updated as files are
-	// scanned, so the right debounce can be chosen at schedule time even when a
-	// Kanban save has momentarily invalidated the metadata cache.
-	private knownBoards = new Set<string>();
+	scanRouter!: ScanRouterService;
 
 	// Disk cache for the downloaded CDN Mermaid, backed by plugin settings so a
 	// downloaded version survives reloads.
@@ -81,12 +74,23 @@ export default class WonderPlugin extends Plugin {
 		this.settingsStore = await ObsidianSettingsStore.load(this);
 		this.settings = this.settingsStore.get();
 
-		this.actionCapture = new ActionCaptureService(
-			new ObsidianVault(this.app),
+		const vault = new ObsidianVault(this.app);
+		const workspace = new ObsidianWorkspace(this.app);
+		const metadata = new ObsidianMetadata(this.app);
+		const scheduler = new ObsidianScheduler(this);
+		const actionCapture = new ActionCaptureService(
+			vault,
 			new ObsidianNotifier(),
 			this.settingsStore,
 		);
-		this.dateNormalizer = new DateNormalizer(this);
+		const dateNormalize = new DateNormalizeService(vault, workspace);
+		this.scanRouter = new ScanRouterService(
+			scheduler,
+			metadata,
+			this.settingsStore,
+			actionCapture,
+			dateNormalize,
+		);
 
 		this.registerView(
 			MERMAID_VIEW_TYPE,
@@ -151,7 +155,9 @@ export default class WonderPlugin extends Plugin {
 		// is available to stash as the fallback.
 		this.app.workspace.onLayoutReady(() => void this.syncMermaidGlobal());
 
-		this.app.workspace.onLayoutReady(() => this.indexBoards());
+		this.app.workspace.onLayoutReady(() =>
+			this.scanRouter.indexBoards(this.app.vault.getMarkdownFiles()),
+		);
 
 		this.registerEvent(
 			this.app.workspace.on("editor-menu", (menu, editor) => {
@@ -164,7 +170,7 @@ export default class WonderPlugin extends Plugin {
 		);
 
 		this.registerEvent(
-			this.app.vault.on("modify", (file) => this.scheduleScan(file)),
+			this.app.vault.on("modify", (file) => this.scanRouter.scheduleScan(file)),
 		);
 
 		this.addCommand({
@@ -200,10 +206,8 @@ export default class WonderPlugin extends Plugin {
 	}
 
 	onunload() {
-		for (const timer of this.scanTimers.values()) {
-			clearTimeout(timer);
-		}
-		this.scanTimers.clear();
+		// Pending scan timers are cleared by the scheduler's own teardown, which it
+		// registered with the plugin in onload.
 
 		// Hand Mermaid back to Obsidian if we took it over.
 		if (typeof window !== "undefined") {
@@ -498,74 +502,6 @@ export default class WonderPlugin extends Plugin {
 			win.mermaid = win.obsidian_mermaid;
 			resetMermaidCache();
 		}
-	}
-
-	// Debounce a modified file's scan so a burst of edits triggers one run once
-	// the file settles. The board-vs-note routing is decided when the timer
-	// fires, NOT here: a Kanban save invalidates the metadata cache, so at event
-	// time `getFileCache` can briefly report no frontmatter and a board would be
-	// mis-routed to the action scan. By the time the debounce fires the cache has
-	// settled and `isBoardFile` is reliable.
-	scheduleScan(file: TAbstractFile) {
-		if (!(file instanceof TFile)) return;
-		this.debounce(
-			file.path,
-			() => this.scan(file),
-			this.debounceSecondsFor(file),
-		);
-	}
-
-	// Date reconcile is debounced briefly so a board settles fast; action capture
-	// waits longer so it doesn't fire mid-typing. The board check here is
-	// best-effort (it only picks the interval); the authoritative routing happens
-	// in scan() once the cache has settled.
-	private debounceSecondsFor(file: TFile): number {
-		const isBoard = this.knownBoards.has(file.path) || this.isBoardFile(file);
-		return isBoard
-			? this.settings.dateDebounceSeconds
-			: this.settings.actionDebounceSeconds;
-	}
-
-	// Route a settled file: Kanban board files get their picker dates normalized
-	// to the Tasks emoji format; every other note is scanned for @action markers.
-	private scan(file: TFile) {
-		if (this.isBoardFile(file)) {
-			this.knownBoards.add(file.path);
-			if (this.settings.normalizeKanbanDates)
-				this.dateNormalizer.normalize(file);
-		} else {
-			this.knownBoards.delete(file.path);
-			void this.actionCapture.run(file);
-		}
-	}
-
-	private indexBoards() {
-		for (const file of this.app.vault.getMarkdownFiles()) {
-			if (this.isBoardFile(file)) this.knownBoards.add(file.path);
-		}
-	}
-
-	private isBoardFile(file: TFile): boolean {
-		return (
-			this.app.metadataCache.getFileCache(file)?.frontmatter?.[
-				"kanban-plugin"
-			] === "board"
-		);
-	}
-
-	private debounce(path: string, fn: () => void, seconds: number) {
-		const pending = this.scanTimers.get(path);
-		if (pending) {
-			clearTimeout(pending);
-		}
-
-		this.scanTimers.set(
-			path,
-			setTimeout(() => {
-				this.scanTimers.delete(path);
-				fn();
-			}, seconds * 1000),
-		);
 	}
 
 	async saveSettings() {
