@@ -8,7 +8,6 @@ import {
 	Plugin,
 	TFile,
 	TFolder,
-	loadMermaid,
 } from "obsidian";
 import { WonderSettings, WonderSettingTab } from "./settings";
 import { ObsidianVault } from "./adapters/obsidian/vault.adapter";
@@ -26,12 +25,8 @@ import { GitFileHistoryService } from "./app/git/file-history.service";
 import { GitRepoCommitsService } from "./app/git/repo-commits.service";
 import { GIT_VIEW_TYPE, GitView } from "./adapters/obsidian/views/git.view";
 import type { SettingsStore } from "./ports/settings-store";
-import {
-	getMermaid,
-	resetMermaidCache,
-	type MermaidAPI,
-	type MermaidDiskCache,
-} from "./mermaid-loader";
+import { ObsidianMermaidEngine } from "./adapters/obsidian/mermaid-engine.adapter";
+import type { MermaidAPI } from "./core/mermaid/config";
 import { MERMAID_VIEW_TYPE, MermaidEditorView } from "./mermaid-view";
 import {
 	findAllMermaidBlocks,
@@ -45,15 +40,6 @@ import {
 	MermaidFileView,
 } from "./mermaid-file-view";
 
-// Marks a `window.mermaid` we installed, so we know whether to restore Obsidian's
-// original on unload and don't re-stash our own as the "original".
-const OWNED_BY_WONDER = Symbol("wonder.mermaid.owned");
-
-type WindowWithMermaid = Window & {
-	mermaid?: MermaidAPI & { [OWNED_BY_WONDER]?: true };
-	obsidian_mermaid?: MermaidAPI;
-};
-
 // This is the main plugin class
 export default class WonderPlugin extends Plugin {
 	// Assigned in onload(), Obsidian's async lifecycle entry point, so the
@@ -62,24 +48,17 @@ export default class WonderPlugin extends Plugin {
 	settingsStore!: SettingsStore<WonderSettings>;
 	scanRouter!: ScanRouterService;
 	refreshContext!: RefreshContextService;
-
-	// Disk cache for the downloaded CDN Mermaid, backed by plugin settings so a
-	// downloaded version survives reloads.
-	readonly mermaidDiskCache: MermaidDiskCache = {
-		read: async () => this.settings.mermaidCdnCache,
-		write: async (value) => {
-			this.settings.mermaidCdnCache = value;
-			await this.saveSettings();
-		},
-	};
-
-	// Memoized ELK layout loaders, imported from the bundled elk.js shipped beside
-	// the plugin. Loaded once, on first use, and only when ELK is enabled.
-	private elkLoaders: Promise<unknown[] | null> | null = null;
+	private mermaidEngine!: ObsidianMermaidEngine;
 
 	async onload() {
 		this.settingsStore = await ObsidianSettingsStore.load(this);
 		this.settings = this.settingsStore.get();
+
+		this.mermaidEngine = new ObsidianMermaidEngine(
+			this.app,
+			this.manifest,
+			this.settingsStore,
+		);
 
 		const vault = new ObsidianVault(this.app);
 		const workspace = new ObsidianWorkspace(this.app);
@@ -254,16 +233,9 @@ export default class WonderPlugin extends Plugin {
 
 	onunload() {
 		// Pending scan timers are cleared by the scheduler's own teardown, which it
-		// registered with the plugin in onload.
-
-		// Hand Mermaid back to Obsidian if we took it over.
-		if (typeof window !== "undefined") {
-			const win = window as WindowWithMermaid;
-			if (win.mermaid?.[OWNED_BY_WONDER] && win.obsidian_mermaid) {
-				win.mermaid = win.obsidian_mermaid;
-			}
-		}
-		resetMermaidCache();
+		// registered with the plugin in onload. The Mermaid engine restores the
+		// global it took over.
+		this.mermaidEngine.reset();
 	}
 
 	// Open (or reveal) the Mermaid editor in the right sidebar.
@@ -492,49 +464,10 @@ export default class WonderPlugin extends Plugin {
 		await this.app.workspace.getLeaf(true).openFile(created);
 	}
 
-	// Resolve a ready Mermaid instance for the current settings, injecting the
-	// local ELK loader. Used by both views and the global swap.
+	// Resolve a ready Mermaid instance for the current settings. Used by both
+	// views; delegates to the Mermaid engine adapter.
 	getMermaidInstance(): Promise<MermaidAPI> {
-		return getMermaid(
-			this.mermaidDiskCache,
-			this.settings.mermaidUseObsidianTheme,
-			this.settings.mermaidUseElk,
-			this.settings.mermaidUseHandDrawn,
-			() => this.loadElkLoaders(),
-		);
-	}
-
-	// Import the bundled elk.js from the plugin folder (via the vault adapter) and
-	// return its layout loaders. Memoized; returns null on any failure so ELK
-	// simply degrades to the default layout.
-	private loadElkLoaders(): Promise<unknown[] | null> {
-		if (!this.elkLoaders) {
-			this.elkLoaders = (async () => {
-				try {
-					const path = `${this.app.vault.configDir}/plugins/${this.manifest.id}/elk.js`;
-					const source = await this.app.vault.adapter.read(path);
-					const blob = new Blob([source], {
-						type: "application/javascript",
-					});
-					const url = URL.createObjectURL(blob);
-					try {
-						const mod = (await import(/* @vite-ignore */ url)) as {
-							default?: unknown[];
-						};
-						return mod.default ?? null;
-					} finally {
-						URL.revokeObjectURL(url);
-					}
-				} catch (err) {
-					console.warn(
-						"[Wonder] ELK bundle (elk.js) unavailable; using default layout.",
-						err,
-					);
-					return null;
-				}
-			})();
-		}
-		return this.elkLoaders;
+		return this.mermaidEngine.getInstance();
 	}
 
 	// The CodeMirror editor of the active markdown note, if any. Used by the view
@@ -543,26 +476,10 @@ export default class WonderPlugin extends Plugin {
 		return this.app.workspace.getActiveViewOfType(MarkdownView)?.editor ?? null;
 	}
 
-	// Install the downloaded Mermaid as `window.mermaid` so every `mermaid` block
-	// across Obsidian renders with it. With no download cached this restores the
-	// built-in, so the swap is a safe no-op until the user opts in via a download.
-	async syncMermaidGlobal(): Promise<void> {
-		const win = window as WindowWithMermaid;
-		// Stash Obsidian's original exactly once, before we overwrite it.
-		if (!win.mermaid?.[OWNED_BY_WONDER]) {
-			win.obsidian_mermaid =
-				win.mermaid ?? ((await loadMermaid()) as MermaidAPI);
-		}
-		if (this.settings.mermaidCdnCache) {
-			const mermaid = await this.getMermaidInstance();
-			const owned = mermaid as MermaidAPI & { [OWNED_BY_WONDER]?: true };
-			owned[OWNED_BY_WONDER] = true;
-			win.mermaid = owned;
-		} else if (win.obsidian_mermaid) {
-			// Nothing downloaded (or cache cleared): hand back to the built-in.
-			win.mermaid = win.obsidian_mermaid;
-			resetMermaidCache();
-		}
+	// Install the downloaded Mermaid as the global (or restore the built-in).
+	// Delegates to the Mermaid engine adapter; kept here for the settings tab.
+	syncMermaidGlobal(): Promise<void> {
+		return this.mermaidEngine.syncGlobal();
 	}
 
 	async saveSettings() {
