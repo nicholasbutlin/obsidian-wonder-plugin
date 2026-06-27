@@ -1,10 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { TFile } from "obsidian";
-import { ActionProcessor } from "./action-processor";
+import { ActionCaptureService } from "./action-capture.service";
+import type { VaultPort } from "../../ports/vault";
+import type { Notifier } from "../../ports/notifier";
+import type { SettingsStore } from "../../ports/settings-store";
+import type { WonderSettings } from "../../settings";
 
-// A tiny in-memory stand-in for Obsidian's Vault, exposing only what
-// ActionProcessor touches.
-class FakeVault {
+// A tiny in-memory VaultPort, exposing only what the service touches.
+class FakeVault implements VaultPort {
 	private contents = new Map<TFile, string>();
 	private byPath = new Map<string, TFile>();
 
@@ -21,30 +24,28 @@ class FakeVault {
 		return this.contents.get(file) ?? "";
 	}
 
-	async modify(file: TFile, data: string): Promise<void> {
-		this.contents.set(file, data);
-	}
-
 	async process(file: TFile, fn: (data: string) => string): Promise<string> {
 		const next = fn(this.contents.get(file) ?? "");
 		this.contents.set(file, next);
 		return next;
 	}
 
-	getAbstractFileByPath(path: string): TFile | null {
+	getFileByPath(path: string): TFile | null {
 		return this.byPath.get(path) ?? null;
 	}
 }
 
-function makeProcessor(vault: FakeVault): ActionProcessor {
-	const plugin = {
-		app: { vault },
-		settings: { kanbanFile: "ToDo Auto" },
+function makeService(vault: FakeVault): ActionCaptureService {
+	const notifier: Notifier = { info: () => {} };
+	const settings: SettingsStore<WonderSettings> = {
+		get: () => ({ kanbanFile: "ToDo Auto" }) as WonderSettings,
+		update: async () => {},
+		save: async () => {},
 	};
-	return new ActionProcessor(plugin as never);
+	return new ActionCaptureService(vault, notifier, settings);
 }
 
-describe("ActionProcessor.processActionMarkers", () => {
+describe("ActionCaptureService.run", () => {
 	it("processes every @action marker and links each to the board ToDo heading", async () => {
 		const vault = new FakeVault();
 		const note = vault.addFile(
@@ -54,7 +55,7 @@ describe("ActionProcessor.processActionMarkers", () => {
 		);
 		const kanban = vault.addFile("ToDo Auto.md", "ToDo Auto", "## ToDo\n");
 
-		await makeProcessor(vault).processActionMarkers(note);
+		await makeService(vault).run(note);
 
 		const noteOut = await vault.read(note);
 		const kanbanOut = await vault.read(kanban);
@@ -76,7 +77,7 @@ describe("ActionProcessor.processActionMarkers", () => {
 		const note = vault.addFile("Note.md", "Note", "# Notes\njust text\n");
 		const kanban = vault.addFile("ToDo Auto.md", "ToDo Auto", "## ToDo\n");
 
-		await makeProcessor(vault).processActionMarkers(note);
+		await makeService(vault).run(note);
 
 		expect(await vault.read(note)).toBe("# Notes\njust text\n");
 		expect(await vault.read(kanban)).toBe("## ToDo\n");
@@ -86,7 +87,7 @@ describe("ActionProcessor.processActionMarkers", () => {
 		const vault = new FakeVault();
 		const note = vault.addFile("Note.md", "Note", "@action do thing\n");
 
-		await makeProcessor(vault).processActionMarkers(note);
+		await makeService(vault).run(note);
 
 		expect(await vault.read(note)).toBe("@action do thing\n");
 	});
@@ -96,7 +97,7 @@ describe("ActionProcessor.processActionMarkers", () => {
 		const note = vault.addFile("Note.md", "Note", "@action do thing\n");
 		const kanban = vault.addFile("ToDo Auto.md", "ToDo Auto", "## Tasks\n");
 
-		await makeProcessor(vault).processActionMarkers(note);
+		await makeService(vault).run(note);
 
 		// The note must not gain ACTION links to work that was never filed.
 		expect(await vault.read(note)).toBe("@action do thing\n");

@@ -32,8 +32,8 @@ function makePlugin(options: { boardPaths?: string[] } = {}) {
 					: null,
 		},
 	};
-	(plugin as unknown as { actionProcessor: unknown }).actionProcessor = {
-		processActionMarkers: (file: TFile) => {
+	(plugin as unknown as { actionCapture: unknown }).actionCapture = {
+		run: (file: TFile) => {
 			scans.push(file);
 			return Promise.resolve();
 		},

@@ -9,9 +9,13 @@ import {
 	TFolder,
 	loadMermaid,
 } from "obsidian";
-import { WonderSettings, DEFAULT_SETTINGS, WonderSettingTab } from "./settings";
-import { ActionProcessor } from "./action-processor";
+import { WonderSettings, WonderSettingTab } from "./settings";
 import { DateNormalizer } from "./date-bridge";
+import { ObsidianVault } from "./adapters/obsidian/vault.adapter";
+import { ObsidianNotifier } from "./adapters/obsidian/notifier.adapter";
+import { ObsidianSettingsStore } from "./adapters/obsidian/settings-store.adapter";
+import { ActionCaptureService } from "./app/actions/action-capture.service";
+import type { SettingsStore } from "./ports/settings-store";
 import { buildContextBlock, upsertContextSection } from "./core/context/section";
 import {
 	getMermaid,
@@ -46,7 +50,8 @@ export default class WonderPlugin extends Plugin {
 	// Assigned in onload(), Obsidian's async lifecycle entry point, so the
 	// constructor cannot initialize them.
 	settings!: WonderSettings;
-	actionProcessor!: ActionProcessor;
+	settingsStore!: SettingsStore<WonderSettings>;
+	actionCapture!: ActionCaptureService;
 	dateNormalizer!: DateNormalizer;
 
 	// Pending scans, keyed by file path, so rapid edits to the same file
@@ -73,9 +78,14 @@ export default class WonderPlugin extends Plugin {
 	private elkLoaders: Promise<unknown[] | null> | null = null;
 
 	async onload() {
-		await this.loadSettings();
+		this.settingsStore = await ObsidianSettingsStore.load(this);
+		this.settings = this.settingsStore.get();
 
-		this.actionProcessor = new ActionProcessor(this);
+		this.actionCapture = new ActionCaptureService(
+			new ObsidianVault(this.app),
+			new ObsidianNotifier(),
+			this.settingsStore,
+		);
 		this.dateNormalizer = new DateNormalizer(this);
 
 		this.registerView(
@@ -525,7 +535,7 @@ export default class WonderPlugin extends Plugin {
 				this.dateNormalizer.normalize(file);
 		} else {
 			this.knownBoards.delete(file.path);
-			this.actionProcessor.processActionMarkers(file);
+			void this.actionCapture.run(file);
 		}
 	}
 
@@ -558,18 +568,7 @@ export default class WonderPlugin extends Plugin {
 		);
 	}
 
-	async loadSettings() {
-		const data = await this.loadData();
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
-		// Migrate the old single interval: it governed action capture.
-		const legacy = (data as { processRefreshInterval?: number })
-			?.processRefreshInterval;
-		if (legacy != null && data?.actionDebounceSeconds == null) {
-			this.settings.actionDebounceSeconds = legacy;
-		}
-	}
-
 	async saveSettings() {
-		await this.saveData(this.settings);
+		await this.settingsStore.save();
 	}
 }
