@@ -4,7 +4,7 @@ import {
 	hasActions,
 	hasTodoHeading,
 	insertUnderTodoHeading,
-} from "./action-capture";
+} from "./capture";
 
 const opts = {
 	kanbanFile: "ToDo Auto",

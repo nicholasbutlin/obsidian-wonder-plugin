@@ -4,7 +4,7 @@ import {
 	CONTEXT_END,
 	buildContextBlock,
 	upsertContextSection,
-} from "./context-section";
+} from "./section";
 
 const QUERY =
 	"not done\n(due before tomorrow) OR (happens today)\nsort by priority";

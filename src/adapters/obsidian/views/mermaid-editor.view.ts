@@ -7,9 +7,11 @@ import {
 	WorkspaceLeaf,
 	setIcon,
 } from "obsidian";
-import WonderPlugin from "./main";
-import { findMermaidBlockAt, replaceBlockBody } from "./mermaid-block";
-import { SNIPPET_CATEGORIES } from "./mermaid-snippets";
+import {
+	findMermaidBlockAt,
+	replaceBlockBody,
+} from "../../../core/mermaid/block";
+import { SNIPPET_CATEGORIES } from "../../../core/mermaid/snippets";
 
 // A closing fence line: 3+ backticks/tildes, optionally indented, nothing else.
 const CLOSING_FENCE = /^[ \t]*(`{3,}|~{3,})[ \t]*$/;
@@ -31,16 +33,14 @@ interface DiagramBinding {
 // the cursor command); edits stream back to that block so the note is the
 // preview. When unbound it acts as a scratchpad with an "Insert into note" action.
 export class MermaidEditorView extends ItemView {
-	private plugin: WonderPlugin;
 	private textarea!: HTMLTextAreaElement;
 	private statusEl!: HTMLElement;
 	private binding: DiagramBinding | null = null;
 	private pendingValue: string | null = null;
 	private writeTimer: ReturnType<typeof setTimeout> | null = null;
 
-	constructor(leaf: WorkspaceLeaf, plugin: WonderPlugin) {
+	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
-		this.plugin = plugin;
 	}
 
 	getViewType(): string {
@@ -136,7 +136,7 @@ export class MermaidEditorView extends ItemView {
 		}
 
 		// Fallback (note not open in an editor, or an unusual/unclosed block).
-		await this.plugin.app.vault.process(file, (data) => {
+		await this.app.vault.process(file, (data) => {
 			const block = findMermaidBlockAt(data, anchorLine);
 			if (!block) return data; // block moved/removed; leave the note untouched
 			return replaceBlockBody(data, block, source);
@@ -146,7 +146,7 @@ export class MermaidEditorView extends ItemView {
 
 	// The markdown view for a file currently open in a leaf, if any.
 	private markdownViewForFile(file: TFile): MarkdownView | null {
-		for (const leaf of this.plugin.app.workspace.getLeavesOfType("markdown")) {
+		for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
 			const view = leaf.view;
 			if (view instanceof MarkdownView && view.file?.path === file.path) {
 				return view;
@@ -201,8 +201,9 @@ export class MermaidEditorView extends ItemView {
 			new Notice("Wonder: nothing to insert.");
 			return;
 		}
-		const file = this.plugin.app.workspace.getActiveFile();
-		const editor = this.plugin.activeMarkdownEditor();
+		const file = this.app.workspace.getActiveFile();
+		const editor =
+			this.app.workspace.getActiveViewOfType(MarkdownView)?.editor ?? null;
 		if (!file || !editor) {
 			new Notice("Wonder: open a note to insert the diagram into.");
 			return;

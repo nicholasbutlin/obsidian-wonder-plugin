@@ -168,3 +168,222 @@
 	color: var(--text-normal);
 	background: var(--background-modifier-hover);
 }
+
+/* ── Wonder Git panel ─────────────────────────────────────────────── */
+.wonder-git {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	padding: 0;
+}
+
+.wonder-git-tabs {
+	display: flex;
+	gap: var(--size-2-1);
+	padding: var(--size-4-2);
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.wonder-git-tab {
+	flex: 1;
+	padding: var(--size-2-2) var(--size-4-2);
+	background: transparent;
+	border: none;
+	border-radius: var(--radius-s);
+	color: var(--text-muted);
+	cursor: pointer;
+	font-size: var(--font-ui-small);
+}
+
+.wonder-git-tab:hover {
+	background: var(--background-modifier-hover);
+}
+
+.wonder-git-tab.is-active {
+	background: var(--background-modifier-active-hover);
+	color: var(--text-normal);
+	font-weight: var(--font-semibold);
+}
+
+.wonder-git-body {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	padding: var(--size-4-2);
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-2);
+}
+
+.wonder-git-path {
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	word-break: break-all;
+}
+
+.wonder-git-commits,
+.wonder-git-files {
+	display: flex;
+	flex-direction: column;
+}
+
+.wonder-git-commit {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: var(--size-2-2) var(--size-4-1);
+	border-radius: var(--radius-s);
+	cursor: pointer;
+	border-left: 2px solid transparent;
+}
+
+.wonder-git-commit:hover {
+	background: var(--background-modifier-hover);
+}
+
+.wonder-git-commit.is-selected {
+	background: var(--background-modifier-active-hover);
+	border-left-color: var(--interactive-accent);
+}
+
+.wonder-git-subject {
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+	line-height: 1.3;
+}
+
+.wonder-git-meta {
+	display: flex;
+	gap: var(--size-4-2);
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+}
+
+.wonder-git-hash {
+	font-family: var(--font-monospace);
+	color: var(--text-accent);
+}
+
+.wonder-git-file {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-1);
+	padding: var(--size-2-1) var(--size-4-1);
+	border-radius: var(--radius-s);
+	cursor: pointer;
+}
+
+.wonder-git-file:hover {
+	background: var(--background-modifier-hover);
+}
+
+.wonder-git-file.is-selected {
+	background: var(--background-modifier-active-hover);
+}
+
+.wonder-git-status {
+	flex: 0 0 auto;
+	width: 1.2em;
+	text-align: center;
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-bold);
+	border-radius: var(--radius-s);
+}
+
+.wonder-git-status.is-A {
+	color: var(--text-success);
+}
+.wonder-git-status.is-M {
+	color: var(--text-warning);
+}
+.wonder-git-status.is-D {
+	color: var(--text-error);
+}
+.wonder-git-status.is-R,
+.wonder-git-status.is-C {
+	color: var(--text-accent);
+}
+
+.wonder-git-filepath {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	word-break: break-all;
+}
+
+.wonder-git-detail {
+	min-height: 0;
+}
+
+.wonder-git-loading {
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	padding: var(--size-4-2);
+}
+
+/* Four-column grid: [old gutter, old code, new gutter, new code]. */
+.wonder-git-diff {
+	display: grid;
+	grid-template-columns: auto 1fr auto 1fr;
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-smaller);
+	line-height: 1.4;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	overflow-x: auto;
+}
+
+.wonder-git-hunk {
+	grid-column: 1 / -1;
+	padding: 2px var(--size-4-2);
+	color: var(--text-faint);
+	background: var(--background-secondary);
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.wonder-git-diff > .wonder-git-hunk:first-child {
+	border-top: none;
+}
+
+.wonder-git-num {
+	padding: 0 var(--size-4-1);
+	text-align: right;
+	color: var(--text-faint);
+	background: var(--background-secondary);
+	user-select: none;
+	white-space: nowrap;
+}
+
+.wonder-git-code {
+	padding: 0 var(--size-4-2);
+	white-space: pre-wrap;
+	word-break: break-word;
+	color: var(--text-normal);
+}
+
+.wonder-git-code.is-add {
+	background: var(--background-modifier-success);
+}
+
+.wonder-git-code.is-del {
+	background: var(--background-modifier-error);
+}
+
+.wonder-git-code.is-empty {
+	background: var(--background-secondary-alt);
+}
+
+.wonder-git-empty {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	padding: var(--size-4-4) var(--size-4-2);
+}
+
+.wonder-git-empty-icon {
+	display: inline-flex;
+	color: var(--text-faint);
+}

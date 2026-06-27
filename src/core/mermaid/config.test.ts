@@ -4,7 +4,7 @@ import {
 	createMermaidId,
 	getMermaidConfig,
 	rewriteChunkImports,
-} from "./mermaid-loader";
+} from "./config";
 
 describe("cdnBaseUrl", () => {
 	it("uses the unversioned path for 'latest'", () => {
