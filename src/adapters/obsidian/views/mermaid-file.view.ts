@@ -1,6 +1,6 @@
 import { TextFileView, WorkspaceLeaf, setIcon } from "obsidian";
-import WonderPlugin from "./main";
-import { createMermaidId } from "./mermaid-loader";
+import { createMermaidId } from "../../../core/mermaid/config";
+import type { MermaidEnginePort } from "../../../ports/mermaid-engine";
 
 export const MERMAID_FILE_VIEW_TYPE = "wonder-mermaid-file";
 export const MERMAID_FILE_EXTENSIONS = ["mermaid", "mmd"];
@@ -10,16 +10,17 @@ export const MERMAID_FILE_EXTENSIONS = ["mermaid", "mmd"];
 // Mermaid loader (the downloaded CDN version, or built-in). Inspired by the
 // Mermaid View plugin.
 export class MermaidFileView extends TextFileView {
-	private plugin: WonderPlugin;
 	private sourceEl!: HTMLTextAreaElement;
 	private previewEl!: HTMLElement;
 	private mode: "preview" | "source" = "preview";
 	private renderTimer: ReturnType<typeof setTimeout> | null = null;
 	private renderSeq = 0;
 
-	constructor(leaf: WorkspaceLeaf, plugin: WonderPlugin) {
+	constructor(
+		leaf: WorkspaceLeaf,
+		private engine: MermaidEnginePort,
+	) {
 		super(leaf);
-		this.plugin = plugin;
 	}
 
 	getViewType(): string {
@@ -107,7 +108,7 @@ export class MermaidFileView extends TextFileView {
 			return;
 		}
 		try {
-			const mermaid = await this.plugin.getMermaidInstance();
+			const mermaid = await this.engine.getInstance();
 			const { svg } = await mermaid.render(
 				createMermaidId("wonder-mmd"),
 				source,
