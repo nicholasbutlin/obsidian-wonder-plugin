@@ -387,3 +387,75 @@
 	display: inline-flex;
 	color: var(--text-faint);
 }
+
+/* ── Frontmatter toggle ───────────────────────────────────────────── */
+/* When `show-frontmatter` is absent from <body>, hide the Properties block
+ * and the raw YAML lines. Each rule also checks the view container, so a note
+ * with `cssclasses: show-frontmatter` keeps its frontmatter visible. */
+body:not(.show-frontmatter)
+	.markdown-preview-view:not(.show-frontmatter)
+	.metadata-container {
+	display: none !important;
+}
+
+body:not(.show-frontmatter)
+	.markdown-source-view:not(.show-frontmatter)
+	.metadata-container {
+	display: none !important;
+}
+
+body:not(.show-frontmatter)
+	.markdown-source-view:not(.show-frontmatter)
+	.cm-line:has(.cm-hmd-frontmatter) {
+	display: none !important;
+}
+
+.wonder-frontmatter-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin: 0 0 1.25em 0;
+	padding: 3px 10px;
+	font-size: 0.78em;
+	font-weight: 500;
+	line-height: 1.4;
+	border-radius: 6px;
+	cursor: pointer;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	color: var(--text-muted);
+	opacity: 0.55;
+	transition:
+		opacity 0.15s ease,
+		background 0.15s ease,
+		color 0.15s ease;
+	user-select: none;
+}
+
+.wonder-frontmatter-toggle__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.wonder-frontmatter-toggle__icon .svg-icon {
+	width: 14px;
+	height: 14px;
+}
+
+.wonder-frontmatter-toggle:hover {
+	opacity: 1;
+	background: var(--interactive-hover);
+	color: var(--text-normal);
+}
+
+.wonder-frontmatter-toggle[aria-pressed="true"] {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border-color: var(--interactive-accent);
+	opacity: 0.75;
+}
+
+.wonder-frontmatter-toggle[aria-pressed="true"]:hover {
+	opacity: 1;
+}

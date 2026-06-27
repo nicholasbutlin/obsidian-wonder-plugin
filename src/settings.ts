@@ -24,6 +24,9 @@ export interface WonderSettings {
 	mermaidCdnCache: MermaidCdnCache | null;
 	// Show the edit button + pan/zoom overlay on rendered diagrams in notes.
 	mermaidDiagramTools: boolean;
+	// Show YAML frontmatter / Properties across notes. When false, frontmatter is
+	// hidden everywhere except notes with `cssclasses: show-frontmatter`.
+	showFrontmatter: boolean;
 }
 
 export const DEFAULT_SETTINGS: WonderSettings = {
@@ -41,6 +44,7 @@ export const DEFAULT_SETTINGS: WonderSettings = {
 	mermaidUseHandDrawn: false,
 	mermaidCdnCache: null,
 	mermaidDiagramTools: true,
+	showFrontmatter: false,
 };
 
 // The Kanban setting stores a vault-relative name without extension; the file
