@@ -1,3 +1,10 @@
+## [1.9.1](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.9.0...1.9.1) (2026-06-27)
+
+
+### Bug Fixes
+
+* **git:** open the Wonder Git panel in the main pane, not the sidebar ([f3b0ffa](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/f3b0ffa634b932bd242da417178b8137301df9b4))
+
 # [1.9.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.8.6...1.9.0) (2026-06-27)
 
 
