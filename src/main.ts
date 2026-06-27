@@ -17,9 +17,9 @@ import { ObsidianWorkspace } from "./adapters/obsidian/workspace.adapter";
 import { ObsidianSettingsStore } from "./adapters/obsidian/settings-store.adapter";
 import { ActionCaptureService } from "./app/actions/action-capture.service";
 import { DateNormalizeService } from "./app/dates/date-normalize.service";
+import { RefreshContextService } from "./app/context/refresh-context.service";
 import { ScanRouterService } from "./app/scan-router.service";
 import type { SettingsStore } from "./ports/settings-store";
-import { buildContextBlock, upsertContextSection } from "./core/context/section";
 import {
 	getMermaid,
 	resetMermaidCache,
@@ -55,6 +55,7 @@ export default class WonderPlugin extends Plugin {
 	settings!: WonderSettings;
 	settingsStore!: SettingsStore<WonderSettings>;
 	scanRouter!: ScanRouterService;
+	refreshContext!: RefreshContextService;
 
 	// Disk cache for the downloaded CDN Mermaid, backed by plugin settings so a
 	// downloaded version survives reloads.
@@ -78,9 +79,10 @@ export default class WonderPlugin extends Plugin {
 		const workspace = new ObsidianWorkspace(this.app);
 		const metadata = new ObsidianMetadata(this.app);
 		const scheduler = new ObsidianScheduler(this);
+		const notifier = new ObsidianNotifier();
 		const actionCapture = new ActionCaptureService(
 			vault,
-			new ObsidianNotifier(),
+			notifier,
 			this.settingsStore,
 		);
 		const dateNormalize = new DateNormalizeService(vault, workspace);
@@ -90,6 +92,12 @@ export default class WonderPlugin extends Plugin {
 			this.settingsStore,
 			actionCapture,
 			dateNormalize,
+		);
+		this.refreshContext = new RefreshContextService(
+			vault,
+			workspace,
+			notifier,
+			this.settingsStore,
 		);
 
 		this.registerView(
@@ -176,7 +184,7 @@ export default class WonderPlugin extends Plugin {
 		this.addCommand({
 			id: "refresh-context",
 			name: "Refresh Context section",
-			callback: () => this.refreshContext(),
+			callback: () => void this.refreshContext.run(),
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
@@ -186,23 +194,6 @@ export default class WonderPlugin extends Plugin {
 	insertDateHeading(editor: Editor) {
 		const date = window.moment().format(this.settings.dateFormat);
 		editor.replaceSelection(`# ${date}`);
-	}
-
-	// Insert or refresh the marked Context section at the bottom of the active
-	// note, leaving everything above it untouched.
-	async refreshContext() {
-		const file = this.app.workspace.getActiveFile();
-		if (!file) {
-			new Notice("Wonder: open a note to refresh its Context section.");
-			return;
-		}
-		const block = buildContextBlock(
-			this.settings.contextHeading,
-			this.settings.contextQuery,
-		);
-		await this.app.vault.process(file, (data) =>
-			upsertContextSection(data, block),
-		);
 	}
 
 	onunload() {

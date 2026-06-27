@@ -1,4 +1,4 @@
-import { App } from "obsidian";
+import { App, TFile } from "obsidian";
 import type { WorkspacePort } from "../../ports/workspace";
 
 // A Kanban board leaf's view, as much of it as we touch. Kanban reparses the
@@ -11,6 +11,10 @@ type BoardView = {
 
 export class ObsidianWorkspace implements WorkspacePort {
 	constructor(private app: App) {}
+
+	getActiveFile(): TFile | null {
+		return this.app.workspace.getActiveFile();
+	}
 
 	// Obsidian doesn't push an external write into a focused TextFileView, so a
 	// Kanban board open on this file keeps showing the stale Kanban date after we
