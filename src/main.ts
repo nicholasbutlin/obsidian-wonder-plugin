@@ -239,13 +239,14 @@ export default class WonderPlugin extends Plugin {
 		this.mermaidEngine.reset();
 	}
 
-	// Open (or reveal) the Wonder Git panel in the right sidebar, optionally
-	// focused on a file's history.
+	// Open (or reveal) the Wonder Git panel as a tab in the main editor pane,
+	// optionally focused on a file's history. The side-by-side diff wants the
+	// width, so it lives in the main area rather than the sidebar.
 	private async openGitView(file?: TFile): Promise<void> {
 		const { workspace } = this.app;
 		let leaf = workspace.getLeavesOfType(GIT_VIEW_TYPE)[0];
 		if (!leaf) {
-			leaf = workspace.getRightLeaf(false) ?? workspace.getLeaf(true);
+			leaf = workspace.getLeaf("tab");
 			await leaf.setViewState({ type: GIT_VIEW_TYPE, active: true });
 		}
 		await workspace.revealLeaf(leaf);
