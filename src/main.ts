@@ -1,8 +1,10 @@
 import {
 	Editor,
+	FileSystemAdapter,
 	MarkdownPostProcessorContext,
 	MarkdownView,
 	Notice,
+	Platform,
 	Plugin,
 	TFile,
 	TFolder,
@@ -19,6 +21,10 @@ import { ActionCaptureService } from "./app/actions/action-capture.service";
 import { DateNormalizeService } from "./app/dates/date-normalize.service";
 import { RefreshContextService } from "./app/context/refresh-context.service";
 import { ScanRouterService } from "./app/scan-router.service";
+import { GitCli } from "./adapters/node/git-cli.adapter";
+import { GitFileHistoryService } from "./app/git/file-history.service";
+import { GitRepoCommitsService } from "./app/git/repo-commits.service";
+import { GIT_VIEW_TYPE, GitView } from "./adapters/obsidian/views/git.view";
 import type { SettingsStore } from "./ports/settings-store";
 import {
 	getMermaid,
@@ -98,6 +104,21 @@ export default class WonderPlugin extends Plugin {
 			workspace,
 			notifier,
 			this.settingsStore,
+		);
+
+		// Git history is desktop-only: it shells out to the git CLI against the
+		// vault's filesystem path, which is null on mobile / non-FileSystemAdapter.
+		const gitRoot =
+			Platform.isDesktopApp &&
+			this.app.vault.adapter instanceof FileSystemAdapter
+				? this.app.vault.adapter.getBasePath()
+				: null;
+		const git = new GitCli(gitRoot);
+		const gitFileHistory = new GitFileHistoryService(git);
+		const gitRepoCommits = new GitRepoCommitsService(git);
+		this.registerView(
+			GIT_VIEW_TYPE,
+			(leaf) => new GitView(leaf, gitFileHistory, gitRepoCommits, git),
 		);
 
 		this.registerView(
@@ -187,6 +208,41 @@ export default class WonderPlugin extends Plugin {
 			callback: () => void this.refreshContext.run(),
 		});
 
+		// Git history surfaces (command, ribbon, file menu) only on desktop, where
+		// the git CLI is reachable. The view itself shows a graceful empty state if
+		// the vault is not a git repository.
+		if (git.isAvailable()) {
+			this.addRibbonIcon("history", "Open Git history", () =>
+				this.openGitView(),
+			);
+			this.addCommand({
+				id: "open-git-history",
+				name: "Open Git history",
+				callback: () => this.openGitView(),
+			});
+			this.addCommand({
+				id: "show-file-git-history",
+				name: "Show Git history for current file",
+				checkCallback: (checking) => {
+					const file = this.app.workspace.getActiveFile();
+					if (!file) return false;
+					if (!checking) void this.openGitView(file);
+					return true;
+				},
+			});
+			this.registerEvent(
+				this.app.workspace.on("file-menu", (menu, file) => {
+					if (!(file instanceof TFile) || file.extension !== "md") return;
+					menu.addItem((item) =>
+						item
+							.setTitle("Git history")
+							.setIcon("history")
+							.onClick(() => void this.openGitView(file)),
+					);
+				}),
+			);
+		}
+
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new WonderSettingTab(this.app, this));
 	}
@@ -232,6 +288,20 @@ export default class WonderPlugin extends Plugin {
 				});
 			}
 		}
+	}
+
+	// Open (or reveal) the Wonder Git panel in the right sidebar, optionally
+	// focused on a file's history.
+	private async openGitView(file?: TFile): Promise<void> {
+		const { workspace } = this.app;
+		let leaf = workspace.getLeavesOfType(GIT_VIEW_TYPE)[0];
+		if (!leaf) {
+			leaf = workspace.getRightLeaf(false) ?? workspace.getLeaf(true);
+			await leaf.setViewState({ type: GIT_VIEW_TYPE, active: true });
+		}
+		await workspace.revealLeaf(leaf);
+		const view = leaf.view;
+		if (file && view instanceof GitView) await view.showFile(file);
 	}
 
 	// Open the editor seeded from the `mermaid` block under the cursor, bound so
