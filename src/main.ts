@@ -278,6 +278,7 @@ export default class WonderPlugin extends Plugin {
 				this,
 				this.settingsStore,
 				this.mermaidEngine,
+				this.frontmatterToggle,
 			),
 		);
 	}
