@@ -1,3 +1,10 @@
+# [1.11.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.10.0...1.11.0) (2026-06-27)
+
+
+### Features
+
+* group settings into a section per Wonder sub-component ([0037b4f](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/0037b4fed8572eba77ca67e671c2f245e257f7fe))
+
 # [1.10.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.9.1...1.10.0) (2026-06-27)
 
 
