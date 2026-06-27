@@ -5,7 +5,10 @@ import { LOG_FIELD, LOG_RECORD } from "../../core/git/log";
 import type { GitPort } from "../../ports/git";
 
 function logRecord(hash: string, subject: string): string {
-	return [hash, hash.slice(0, 4), "Nick", "2026-06-20", subject].join(LOG_FIELD) + LOG_RECORD;
+	return (
+		[hash, hash.slice(0, 4), "Nick", "2026-06-20", subject].join(LOG_FIELD) +
+		LOG_RECORD
+	);
 }
 
 // A GitPort that returns canned stdout and records the arguments it was called

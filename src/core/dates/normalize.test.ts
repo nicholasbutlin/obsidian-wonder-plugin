@@ -40,7 +40,9 @@ describe("normalizeKanbanDates", () => {
 	// one rather than leaving two due dates on the card.
 	it("replaces an existing 📅 on a line when a new brace date is picked", () => {
 		expect(
-			normalizeKanbanDates("- [ ] Pay HMRC 📅 2026-06-30 #General @{2026-07-15}"),
+			normalizeKanbanDates(
+				"- [ ] Pay HMRC 📅 2026-06-30 #General @{2026-07-15}",
+			),
 		).toBe("- [ ] Pay HMRC #General 📅 2026-07-15");
 	});
 

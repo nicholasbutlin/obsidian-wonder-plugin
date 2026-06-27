@@ -99,7 +99,9 @@ export class GitView extends ItemView {
 	private syncTabs(): void {
 		this.tabBar
 			.querySelectorAll<HTMLElement>(".wonder-git-tab")
-			.forEach((el) => el.toggleClass("is-active", el.dataset.tab === this.tab));
+			.forEach((el) =>
+				el.toggleClass("is-active", el.dataset.tab === this.tab),
+			);
 	}
 
 	private async render(): Promise<void> {

@@ -21,9 +21,7 @@ export class RefreshContextService {
 	async run(): Promise<void> {
 		const file = this.workspace.getActiveFile();
 		if (!file) {
-			this.notifier.info(
-				"Wonder: open a note to refresh its Context section.",
-			);
+			this.notifier.info("Wonder: open a note to refresh its Context section.");
 			return;
 		}
 		const { contextHeading, contextQuery } = this.settings.get();

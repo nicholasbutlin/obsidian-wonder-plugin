@@ -7,7 +7,10 @@ const HUNK_HEADER = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@(.*)$/;
 // paired column-for-column: a delete with a matching add becomes one "change"
 // row, surplus deletes/adds become "del"/"add" rows.
 export function parseUnifiedDiff(stdout: string): FileDiff {
-	if (/^Binary files .* differ$/m.test(stdout) || /^GIT binary patch$/m.test(stdout)) {
+	if (
+		/^Binary files .* differ$/m.test(stdout) ||
+		/^GIT binary patch$/m.test(stdout)
+	) {
 		return { binary: true, hunks: [] };
 	}
 
