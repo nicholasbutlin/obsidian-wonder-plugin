@@ -1,3 +1,10 @@
+# [1.10.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.9.1...1.10.0) (2026-06-27)
+
+
+### Features
+
+* fold the frontmatter toggle into Wonder ([0a1cf01](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/0a1cf013b01e918d7c2676ebbb89378482a7084c))
+
 ## [1.9.1](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.9.0...1.9.1) (2026-06-27)
 
 
