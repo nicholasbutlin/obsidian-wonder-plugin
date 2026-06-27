@@ -12,7 +12,7 @@ import {
 import { WonderSettings, DEFAULT_SETTINGS, WonderSettingTab } from "./settings";
 import { ActionProcessor } from "./action-processor";
 import { DateNormalizer } from "./date-bridge";
-import { buildContextBlock, upsertContextSection } from "./context-section";
+import { buildContextBlock, upsertContextSection } from "./core/context/section";
 import {
 	getMermaid,
 	resetMermaidCache,
@@ -24,7 +24,7 @@ import {
 	findAllMermaidBlocks,
 	findMermaidBlockAt,
 	isMermaidFenceLine,
-} from "./mermaid-block";
+} from "./core/mermaid/block";
 import { decorateDiagram } from "./mermaid-overlay";
 import {
 	MERMAID_FILE_EXTENSIONS,

@@ -4,7 +4,7 @@ import {
 	findFirstMermaidBlock,
 	findMermaidBlockAt,
 	replaceBlockBody,
-} from "./mermaid-block";
+} from "./block";
 
 // Locate a block and assert it exists, so the test body works with a definite
 // value instead of a non-null assertion at every call site.

@@ -7,7 +7,7 @@ import {
 	hasTodoHeading,
 	insertUnderTodoHeading,
 	type CapturedAction,
-} from "./action-capture";
+} from "./core/actions/capture";
 
 // Obsidian adapter around the pure action-capture domain: reads the note and
 // board, applies the transform atomically, and files the captured tasks.

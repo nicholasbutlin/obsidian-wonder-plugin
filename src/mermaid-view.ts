@@ -8,8 +8,8 @@ import {
 	setIcon,
 } from "obsidian";
 import WonderPlugin from "./main";
-import { findMermaidBlockAt, replaceBlockBody } from "./mermaid-block";
-import { SNIPPET_CATEGORIES } from "./mermaid-snippets";
+import { findMermaidBlockAt, replaceBlockBody } from "./core/mermaid/block";
+import { SNIPPET_CATEGORIES } from "./core/mermaid/snippets";
 
 // A closing fence line: 3+ backticks/tildes, optionally indented, nothing else.
 const CLOSING_FENCE = /^[ \t]*(`{3,}|~{3,})[ \t]*$/;
