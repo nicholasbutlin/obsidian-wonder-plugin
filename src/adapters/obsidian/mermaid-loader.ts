@@ -6,7 +6,7 @@ import {
 	type ElkLoader,
 	type MermaidAPI,
 	type MermaidDiskCache,
-} from "./core/mermaid/config";
+} from "../../core/mermaid/config";
 
 // Loads Mermaid for the Wonder plugin. Unlike the bundled approach, we never
 // ship Mermaid in main.js: a chosen version is fetched from the jsDelivr CDN
@@ -18,7 +18,7 @@ import {
 // The pure config/URL helpers (getMermaidConfig, cdnBaseUrl, rewriteChunkImports,
 // createMermaidId) and shared types now live in ./core/mermaid/config and are
 // re-exported here for existing importers.
-export * from "./core/mermaid/config";
+export * from "../../core/mermaid/config";
 
 export async function fetchMermaidSource(version: string): Promise<string> {
 	const baseUrl = cdnBaseUrl(version);

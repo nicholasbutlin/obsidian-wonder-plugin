@@ -12,7 +12,7 @@ import {
 	findMermaidBlockAt,
 	isMermaidFenceLine,
 } from "../../core/mermaid/block";
-import { decorateDiagram } from "../../mermaid-overlay";
+import { decorateDiagram } from "./mermaid-overlay";
 import {
 	MERMAID_VIEW_TYPE,
 	MermaidEditorView,

@@ -1,5 +1,5 @@
 import { App, PluginManifest, loadMermaid } from "obsidian";
-import { getMermaid, resetMermaidCache } from "../../mermaid-loader";
+import { getMermaid, resetMermaidCache } from "./mermaid-loader";
 import type { MermaidAPI, MermaidDiskCache } from "../../core/mermaid/config";
 import type { SettingsStore } from "../../ports/settings-store";
 import type { WonderSettings } from "../../settings";

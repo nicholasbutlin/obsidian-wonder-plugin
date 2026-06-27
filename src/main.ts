@@ -6,7 +6,8 @@ import {
 	TFile,
 	TFolder,
 } from "obsidian";
-import { WonderSettings, WonderSettingTab } from "./settings";
+import { WonderSettings } from "./settings";
+import { WonderSettingTab } from "./adapters/obsidian/settings-tab";
 import { ObsidianVault } from "./adapters/obsidian/vault.adapter";
 import { ObsidianNotifier } from "./adapters/obsidian/notifier.adapter";
 import { ObsidianMetadata } from "./adapters/obsidian/metadata.adapter";
@@ -221,7 +222,9 @@ export default class WonderPlugin extends Plugin {
 		}
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new WonderSettingTab(this.app, this));
+		this.addSettingTab(
+			new WonderSettingTab(this.app, this, this.settingsStore, this.mermaidEngine),
+		);
 	}
 
 	insertDateHeading(editor: Editor) {
