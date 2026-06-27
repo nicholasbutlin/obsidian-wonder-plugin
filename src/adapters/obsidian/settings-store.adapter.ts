@@ -19,7 +19,8 @@ export class ObsidianSettingsStore implements SettingsStore<WonderSettings> {
 			?.processRefreshInterval;
 		if (
 			legacy != null &&
-			(data as { actionDebounceSeconds?: number })?.actionDebounceSeconds == null
+			(data as { actionDebounceSeconds?: number })?.actionDebounceSeconds ==
+				null
 		) {
 			settings.actionDebounceSeconds = legacy;
 		}

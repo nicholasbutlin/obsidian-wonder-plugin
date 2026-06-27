@@ -73,7 +73,15 @@ export class GitCli implements GitPort {
 	diff({ commit, path }: { commit: string; path: string }): Promise<string> {
 		// `git show` with an empty format prints just the patch; it works for the
 		// root commit too (no parent), showing the file as all-additions.
-		return this.run(["show", "--no-color", "--format=", "-M", commit, "--", path]);
+		return this.run([
+			"show",
+			"--no-color",
+			"--format=",
+			"-M",
+			commit,
+			"--",
+			path,
+		]);
 	}
 
 	private async run(args: string[]): Promise<string> {

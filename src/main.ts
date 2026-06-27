@@ -223,7 +223,12 @@ export default class WonderPlugin extends Plugin {
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(
-			new WonderSettingTab(this.app, this, this.settingsStore, this.mermaidEngine),
+			new WonderSettingTab(
+				this.app,
+				this,
+				this.settingsStore,
+				this.mermaidEngine,
+			),
 		);
 	}
 

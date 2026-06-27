@@ -31,7 +31,10 @@ function makeService(activeFile: TFile | null, content: string) {
 	const notifier: Notifier = { info: () => {} };
 	const settings: SettingsStore<WonderSettings> = {
 		get: () =>
-			({ contextHeading: "Context", contextQuery: "not done" }) as WonderSettings,
+			({
+				contextHeading: "Context",
+				contextQuery: "not done",
+			}) as WonderSettings,
 		update: async () => {},
 		save: async () => {},
 	};
