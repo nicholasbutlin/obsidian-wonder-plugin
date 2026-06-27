@@ -92,9 +92,24 @@ export class FrontmatterToggle {
 		view.containerEl
 			.querySelectorAll<HTMLElement>(".inline-title")
 			.forEach((titleEl) => {
-				const next = titleEl.nextElementSibling;
-				if (next && next.classList.contains(INLINE_BTN_CLASS)) {
-					this.updateButton(next as HTMLElement);
+				const parent = titleEl.parentElement;
+				if (!parent) return;
+				// Don't rely on nextElementSibling: Obsidian renders the Properties
+				// block right after the title and re-creates it whenever metadata
+				// changes, which displaces our button. Trusting adjacency made every
+				// refresh tick inject a fresh button, stacking duplicates. Instead,
+				// find any existing button in the title's container, reuse the first,
+				// and drop the rest.
+				const existing = Array.from(parent.children).filter(
+					(el): el is HTMLElement =>
+						el instanceof HTMLElement &&
+						el.classList.contains(INLINE_BTN_CLASS),
+				);
+				if (existing.length > 0) {
+					const [keep, ...extras] = existing;
+					extras.forEach((el) => el.remove());
+					if (titleEl.nextElementSibling !== keep) titleEl.after(keep);
+					this.updateButton(keep);
 					return;
 				}
 				titleEl.after(this.makeButton());

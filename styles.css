@@ -362,12 +362,14 @@
 	color: var(--text-normal);
 }
 
+/* Subtle theme-derived tints rather than the saturated --background-modifier-*
+   fills, so the monospace code stays legible on both light and dark themes. */
 .wonder-git-code.is-add {
-	background: var(--background-modifier-success);
+	background: rgba(var(--color-green-rgb), 0.12);
 }
 
 .wonder-git-code.is-del {
-	background: var(--background-modifier-error);
+	background: rgba(var(--color-red-rgb), 0.12);
 }
 
 .wonder-git-code.is-empty {
