@@ -25,6 +25,7 @@ import { GIT_VIEW_TYPE, GitView } from "./adapters/obsidian/views/git.view";
 import type { SettingsStore } from "./ports/settings-store";
 import { ObsidianMermaidEngine } from "./adapters/obsidian/mermaid-engine.adapter";
 import { MermaidUi } from "./adapters/obsidian/mermaid-ui";
+import { FrontmatterToggle } from "./adapters/obsidian/frontmatter-toggle";
 import {
 	MERMAID_VIEW_TYPE,
 	MermaidEditorView,
@@ -46,6 +47,7 @@ export default class WonderPlugin extends Plugin {
 	scanRouter!: ScanRouterService;
 	refreshContext!: RefreshContextService;
 	private mermaidEngine!: ObsidianMermaidEngine;
+	private frontmatterToggle!: FrontmatterToggle;
 
 	async onload() {
 		this.settingsStore = await ObsidianSettingsStore.load(this);
@@ -126,6 +128,54 @@ export default class WonderPlugin extends Plugin {
 			name: "Create new Mermaid file",
 			callback: () => void mermaidUi.createMermaidFile(),
 		});
+
+		// Frontmatter visibility toggle (folded in from the standalone plugin):
+		// a body class drives the CSS, with a ribbon icon, a command, and an inline
+		// button under each note title that all stay in sync.
+		const frontmatterToggle = new FrontmatterToggle(
+			this.app,
+			this.settingsStore,
+		);
+		this.frontmatterToggle = frontmatterToggle;
+		frontmatterToggle.applyState();
+		frontmatterToggle.setRibbon(
+			this.addRibbonIcon(
+				frontmatterToggle.icon(),
+				frontmatterToggle.label(),
+				() => void frontmatterToggle.toggle(),
+			),
+		);
+		this.addCommand({
+			id: "toggle-frontmatter-visibility",
+			name: "Toggle frontmatter visibility",
+			callback: () => void frontmatterToggle.toggle(),
+		});
+		this.registerEvent(
+			this.app.workspace.on("active-leaf-change", () =>
+				frontmatterToggle.scheduleRefresh(),
+			),
+		);
+		this.registerEvent(
+			this.app.workspace.on("layout-change", () =>
+				frontmatterToggle.scheduleRefresh(),
+			),
+		);
+		this.registerEvent(
+			this.app.workspace.on("file-open", () =>
+				frontmatterToggle.scheduleRefresh(),
+			),
+		);
+		this.registerEvent(
+			this.app.workspace.on("css-change", () =>
+				frontmatterToggle.scheduleRefresh(),
+			),
+		);
+		this.app.workspace.onLayoutReady(() =>
+			frontmatterToggle.refreshInlineButtons(),
+		);
+		this.registerInterval(
+			window.setInterval(() => frontmatterToggle.refreshInlineButtons(), 2000),
+		);
 
 		// Add an edit button + pan/zoom overlay to every rendered diagram. A
 		// MutationObserver (not a markdown post-processor) is used because Obsidian
@@ -242,6 +292,7 @@ export default class WonderPlugin extends Plugin {
 		// registered with the plugin in onload. The Mermaid engine restores the
 		// global it took over.
 		this.mermaidEngine.reset();
+		this.frontmatterToggle.cleanup();
 	}
 
 	// Open (or reveal) the Wonder Git panel as a tab in the main editor pane,

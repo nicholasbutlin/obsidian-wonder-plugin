@@ -39,6 +39,15 @@ Both `@action` and `@action:` are recognised, and every marker in a note is
 processed. Scans are debounced per file, so a burst of edits triggers a single
 pass once you settle.
 
+### Frontmatter toggle
+
+Hide or show YAML frontmatter / Properties across all notes from a ribbon
+button, the **Toggle frontmatter visibility** command, or an inline button under
+each note's title. The state is remembered per vault (hidden by default) and
+applies in reading view, Live Preview, and source mode. To always show a
+specific note's frontmatter regardless of the toggle, add `cssclasses:
+show-frontmatter` to its frontmatter.
+
 ## Settings
 
 | Setting                                | Description                                                                              | Default      |
