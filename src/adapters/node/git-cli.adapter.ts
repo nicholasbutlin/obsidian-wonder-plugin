@@ -59,17 +59,6 @@ export class GitCli implements GitPort {
 		return this.run(args);
 	}
 
-	nameStatus(commit: string): Promise<string> {
-		return this.run([
-			"diff-tree",
-			"--no-commit-id",
-			"--name-status",
-			"-r",
-			"-M",
-			commit,
-		]);
-	}
-
 	diff({ commit, path }: { commit: string; path: string }): Promise<string> {
 		// `git show` with an empty format prints just the patch; it works for the
 		// root commit too (no parent), showing the file as all-additions.

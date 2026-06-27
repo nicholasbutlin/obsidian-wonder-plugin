@@ -10,15 +10,6 @@ export interface Commit {
 	subject: string;
 }
 
-// git's single-letter change status. R/C carry a similarity score we drop.
-export type FileStatus = "A" | "M" | "D" | "R" | "C" | "T";
-
-export interface FileChange {
-	status: FileStatus;
-	path: string; // destination path (the new name for a rename)
-	oldPath?: string; // source path, for rename (R) and copy (C)
-}
-
 export interface DiffCell {
 	text: string; // line content, without the +/-/space prefix
 	lineNo: number; // 1-based line number on that side

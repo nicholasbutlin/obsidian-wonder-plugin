@@ -177,34 +177,6 @@
 	padding: 0;
 }
 
-.wonder-git-tabs {
-	display: flex;
-	gap: var(--size-2-1);
-	padding: var(--size-4-2);
-	border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.wonder-git-tab {
-	flex: 1;
-	padding: var(--size-2-2) var(--size-4-2);
-	background: transparent;
-	border: none;
-	border-radius: var(--radius-s);
-	color: var(--text-muted);
-	cursor: pointer;
-	font-size: var(--font-ui-small);
-}
-
-.wonder-git-tab:hover {
-	background: var(--background-modifier-hover);
-}
-
-.wonder-git-tab.is-active {
-	background: var(--background-modifier-active-hover);
-	color: var(--text-normal);
-	font-weight: var(--font-semibold);
-}
-
 .wonder-git-body {
 	flex: 1;
 	min-height: 0;
@@ -222,8 +194,7 @@
 	word-break: break-all;
 }
 
-.wonder-git-commits,
-.wonder-git-files {
+.wonder-git-commits {
 	display: flex;
 	flex-direction: column;
 }
@@ -263,53 +234,6 @@
 .wonder-git-hash {
 	font-family: var(--font-monospace);
 	color: var(--text-accent);
-}
-
-.wonder-git-file {
-	display: flex;
-	align-items: center;
-	gap: var(--size-4-1);
-	padding: var(--size-2-1) var(--size-4-1);
-	border-radius: var(--radius-s);
-	cursor: pointer;
-}
-
-.wonder-git-file:hover {
-	background: var(--background-modifier-hover);
-}
-
-.wonder-git-file.is-selected {
-	background: var(--background-modifier-active-hover);
-}
-
-.wonder-git-status {
-	flex: 0 0 auto;
-	width: 1.2em;
-	text-align: center;
-	font-family: var(--font-monospace);
-	font-size: var(--font-ui-smaller);
-	font-weight: var(--font-bold);
-	border-radius: var(--radius-s);
-}
-
-.wonder-git-status.is-A {
-	color: var(--text-success);
-}
-.wonder-git-status.is-M {
-	color: var(--text-warning);
-}
-.wonder-git-status.is-D {
-	color: var(--text-error);
-}
-.wonder-git-status.is-R,
-.wonder-git-status.is-C {
-	color: var(--text-accent);
-}
-
-.wonder-git-filepath {
-	font-size: var(--font-ui-smaller);
-	color: var(--text-muted);
-	word-break: break-all;
 }
 
 .wonder-git-detail {

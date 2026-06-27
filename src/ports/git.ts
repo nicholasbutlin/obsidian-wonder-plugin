@@ -9,8 +9,6 @@ export interface GitPort {
 	isRepo(): Promise<boolean>;
 	// `git log` for the repo, or for a single file when `path` is given.
 	log(opts: { path?: string; max?: number }): Promise<string>;
-	// The files changed in a commit (`git diff-tree --name-status`).
-	nameStatus(commit: string): Promise<string>;
 	// The unified diff a commit introduced for one file (`git show`).
 	diff(opts: { commit: string; path: string }): Promise<string>;
 }

@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { GitFileHistoryService } from "./file-history.service";
-import { GitRepoCommitsService } from "./repo-commits.service";
 import { LOG_FIELD, LOG_RECORD } from "../../core/git/log";
 import type { GitPort } from "../../ports/git";
 
@@ -16,7 +15,6 @@ function logRecord(hash: string, subject: string): string {
 class FakeGit implements GitPort {
 	logCalls: { path?: string; max?: number }[] = [];
 	diffCalls: { commit: string; path: string }[] = [];
-	nameStatusCalls: string[] = [];
 
 	isAvailable(): boolean {
 		return true;
@@ -27,10 +25,6 @@ class FakeGit implements GitPort {
 	async log(opts: { path?: string; max?: number }): Promise<string> {
 		this.logCalls.push(opts);
 		return logRecord("abc123", "first") + "\n" + logRecord("def456", "second");
-	}
-	async nameStatus(commit: string): Promise<string> {
-		this.nameStatusCalls.push(commit);
-		return "A\tnew.md\nM\tedited.md\n";
 	}
 	async diff(opts: { commit: string; path: string }): Promise<string> {
 		this.diffCalls.push(opts);
@@ -57,24 +51,5 @@ describe("GitFileHistoryService", () => {
 			right: { text: "new", lineNo: 1 },
 			kind: "change",
 		});
-	});
-});
-
-describe("GitRepoCommitsService", () => {
-	it("lists repo commits", async () => {
-		const git = new FakeGit();
-		const commits = await new GitRepoCommitsService(git).commits();
-		expect(git.logCalls).toEqual([{ path: undefined, max: undefined }]);
-		expect(commits).toHaveLength(2);
-	});
-
-	it("lists the files changed in a commit", async () => {
-		const git = new FakeGit();
-		const files = await new GitRepoCommitsService(git).changedFiles("abc123");
-		expect(git.nameStatusCalls).toEqual(["abc123"]);
-		expect(files).toEqual([
-			{ status: "A", path: "new.md" },
-			{ status: "M", path: "edited.md" },
-		]);
 	});
 });

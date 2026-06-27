@@ -20,7 +20,6 @@ import { RefreshContextService } from "./app/context/refresh-context.service";
 import { ScanRouterService } from "./app/scan-router.service";
 import { GitCli } from "./adapters/node/git-cli.adapter";
 import { GitFileHistoryService } from "./app/git/file-history.service";
-import { GitRepoCommitsService } from "./app/git/repo-commits.service";
 import { GIT_VIEW_TYPE, GitView } from "./adapters/obsidian/views/git.view";
 import type { SettingsStore } from "./ports/settings-store";
 import { ObsidianMermaidEngine } from "./adapters/obsidian/mermaid-engine.adapter";
@@ -94,10 +93,9 @@ export default class WonderPlugin extends Plugin {
 				: null;
 		const git = new GitCli(gitRoot);
 		const gitFileHistory = new GitFileHistoryService(git);
-		const gitRepoCommits = new GitRepoCommitsService(git);
 		this.registerView(
 			GIT_VIEW_TYPE,
-			(leaf) => new GitView(leaf, gitFileHistory, gitRepoCommits, git),
+			(leaf) => new GitView(leaf, gitFileHistory, git),
 		);
 
 		this.registerView(MERMAID_VIEW_TYPE, (leaf) => new MermaidEditorView(leaf));
