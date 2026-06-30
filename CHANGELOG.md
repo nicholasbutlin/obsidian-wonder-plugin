@@ -1,3 +1,10 @@
+# [1.12.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.11.1...1.12.0) (2026-06-30)
+
+
+### Features
+
+* add PDF export fit tool ([fcb7b26](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/fcb7b267aab3820b77761988ea2c9b68bbff8cd4))
+
 ## [1.11.1](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.11.0...1.11.1) (2026-06-27)
 
 
