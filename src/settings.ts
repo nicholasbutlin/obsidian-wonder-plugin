@@ -27,6 +27,10 @@ export interface WonderSettings {
 	// Show YAML frontmatter / Properties across notes. When false, frontmatter is
 	// hidden everywhere except notes with `cssclasses: show-frontmatter`.
 	showFrontmatter: boolean;
+	// Tighten PDF export margins and fit Mermaid diagrams inside the page.
+	pdfExportFitEnabled: boolean;
+	pdfExportFitPageMarginMm: number;
+	pdfExportFitMaxMermaidHeightMm: number;
 }
 
 export const DEFAULT_SETTINGS: WonderSettings = {
@@ -45,6 +49,9 @@ export const DEFAULT_SETTINGS: WonderSettings = {
 	mermaidCdnCache: null,
 	mermaidDiagramTools: true,
 	showFrontmatter: false,
+	pdfExportFitEnabled: true,
+	pdfExportFitPageMarginMm: 5,
+	pdfExportFitMaxMermaidHeightMm: 242,
 };
 
 // The Kanban setting stores a vault-relative name without extension; the file

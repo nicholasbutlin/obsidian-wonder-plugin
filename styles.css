@@ -385,3 +385,75 @@ body:not(.show-frontmatter)
 .wonder-frontmatter-toggle[aria-pressed="true"]:hover {
 	opacity: 1;
 }
+
+/* ---- PDF export fit ---- */
+body.wonder-pdf-export-fit {
+	--wonder-pdf-export-fit-content-padding: 0px;
+	--wonder-pdf-export-fit-mermaid-max-height: 242mm;
+}
+
+body.wonder-pdf-export-fit .wonder-pdf-export-fit-ribbon {
+	color: var(--interactive-accent);
+}
+
+body.wonder-pdf-export-fit .wonder-pdf-export-fit-mermaid {
+	display: block !important;
+	max-width: 100% !important;
+	overflow: visible !important;
+	page-break-inside: avoid !important;
+	break-inside: avoid !important;
+}
+
+body.wonder-pdf-export-fit .wonder-pdf-export-fit-mermaid-svg {
+	display: block !important;
+	width: min(100%, var(--wonder-pdf-export-fit-svg-width, 100%)) !important;
+	max-width: 100% !important;
+	height: auto !important;
+	max-height: var(--wonder-pdf-export-fit-mermaid-max-height) !important;
+	margin-left: auto !important;
+	margin-right: auto !important;
+	overflow: visible !important;
+}
+
+@media print {
+	body.wonder-pdf-export-fit {
+		margin: 0 !important;
+		padding: 0 !important;
+	}
+
+	body.wonder-pdf-export-fit .markdown-preview-view,
+	body.wonder-pdf-export-fit .markdown-rendered,
+	body.wonder-pdf-export-fit .print,
+	body.wonder-pdf-export-fit .print .markdown-preview-view {
+		--file-line-width: 100%;
+		margin: 0 !important;
+		padding: 0 !important;
+		max-width: none !important;
+		width: auto !important;
+	}
+
+	body.wonder-pdf-export-fit .markdown-preview-sizer,
+	body.wonder-pdf-export-fit .markdown-preview-section,
+	body.wonder-pdf-export-fit .markdown-rendered > div {
+		margin-left: 0 !important;
+		margin-right: 0 !important;
+		padding-left: var(--wonder-pdf-export-fit-content-padding) !important;
+		padding-right: var(--wonder-pdf-export-fit-content-padding) !important;
+		max-width: none !important;
+		width: 100% !important;
+	}
+
+	body.wonder-pdf-export-fit .markdown-preview-view img,
+	body.wonder-pdf-export-fit .markdown-rendered img,
+	body.wonder-pdf-export-fit .markdown-preview-view svg,
+	body.wonder-pdf-export-fit .markdown-rendered svg {
+		max-width: 100% !important;
+	}
+
+	body.wonder-pdf-export-fit .wonder-pdf-export-fit-mermaid,
+	body.wonder-pdf-export-fit pre,
+	body.wonder-pdf-export-fit table {
+		page-break-inside: avoid !important;
+		break-inside: avoid !important;
+	}
+}

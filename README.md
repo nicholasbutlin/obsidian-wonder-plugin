@@ -48,6 +48,13 @@ applies in reading view, Live Preview, and source mode. To always show a
 specific note's frontmatter regardless of the toggle, add `cssclasses:
 show-frontmatter` to its frontmatter.
 
+### PDF export fit
+
+Tighten Obsidian's PDF export spacing and keep Mermaid diagrams inside the
+printable page. The feature is on by default and can be toggled from the ribbon,
+the **Toggle PDF export fit mode** command, or settings. Open a note in reading
+view, then use Obsidian's normal **Export to PDF** command.
+
 ## Settings
 
 | Setting                                | Description                                                                              | Default      |
@@ -55,6 +62,9 @@ show-frontmatter` to its frontmatter.
 | **Date Format**                        | [Moment.js](https://momentjs.com/docs/#/displaying/format/) format for the date heading. | `YYYY-MM-DD` |
 | **Kanban Path**                        | Name of the Kanban note (without `.md`) that actions are routed to.                      | `ToDo Auto`  |
 | **Process Refresh Interval (seconds)** | How long to wait after an edit before scanning a note for `@action` markers.             | `10`         |
+| **PDF export fit**                     | Apply tight PDF export spacing and Mermaid diagram fitting.                              | `on`         |
+| **PDF page margin**                    | Margin in millimetres for PDF export.                                                    | `5`          |
+| **PDF maximum Mermaid height**         | Maximum diagram height in millimetres before it is scaled down.                          | `242`        |
 
 The Kanban note must contain a `## ToDo` heading; new actions are inserted
 directly beneath it.

@@ -25,6 +25,7 @@ import type { SettingsStore } from "./ports/settings-store";
 import { ObsidianMermaidEngine } from "./adapters/obsidian/mermaid-engine.adapter";
 import { MermaidUi } from "./adapters/obsidian/mermaid-ui";
 import { FrontmatterToggle } from "./adapters/obsidian/frontmatter-toggle";
+import { PdfExportFit } from "./adapters/obsidian/pdf-export-fit";
 import {
 	MERMAID_VIEW_TYPE,
 	MermaidEditorView,
@@ -47,6 +48,7 @@ export default class WonderPlugin extends Plugin {
 	refreshContext!: RefreshContextService;
 	private mermaidEngine!: ObsidianMermaidEngine;
 	private frontmatterToggle!: FrontmatterToggle;
+	private pdfExportFit!: PdfExportFit;
 
 	async onload() {
 		this.settingsStore = await ObsidianSettingsStore.load(this);
@@ -175,6 +177,50 @@ export default class WonderPlugin extends Plugin {
 			window.setInterval(() => frontmatterToggle.refreshInlineButtons(), 2000),
 		);
 
+		// PDF export fit (folded in from the standalone plugin): a body class and
+		// print-only page style tighten export spacing, while rendered Mermaid SVGs
+		// are capped to the printable page.
+		const pdfExportFit = new PdfExportFit(this.settingsStore);
+		this.pdfExportFit = pdfExportFit;
+		pdfExportFit.installPageStyle();
+		pdfExportFit.applyState();
+		pdfExportFit.setRibbon(
+			this.addRibbonIcon(
+				pdfExportFit.icon(),
+				pdfExportFit.label(),
+				() => void pdfExportFit.toggle(),
+			),
+		);
+		this.addCommand({
+			id: "toggle-pdf-export-fit",
+			name: "Toggle PDF export fit mode",
+			callback: () => void pdfExportFit.toggle(),
+		});
+		this.addCommand({
+			id: "fit-mermaid-diagrams-for-pdf",
+			name: "Fit Mermaid diagrams for PDF export",
+			callback: () => pdfExportFit.fitRenderedDiagrams(),
+		});
+		const schedulePdfExportFit = () => pdfExportFit.scheduleFit();
+		this.registerEvent(
+			this.app.workspace.on("active-leaf-change", schedulePdfExportFit),
+		);
+		this.registerEvent(
+			this.app.workspace.on("layout-change", schedulePdfExportFit),
+		);
+		this.registerEvent(
+			this.app.workspace.on("file-open", schedulePdfExportFit),
+		);
+		this.registerEvent(
+			this.app.workspace.on("css-change", schedulePdfExportFit),
+		);
+		this.registerDomEvent(window, "beforeprint", () => {
+			pdfExportFit.applyState();
+			pdfExportFit.fitRenderedDiagrams();
+		});
+		pdfExportFit.startObserver();
+		this.app.workspace.onLayoutReady(() => pdfExportFit.fitRenderedDiagrams());
+
 		// Add an edit button + pan/zoom overlay to every rendered diagram. A
 		// MutationObserver (not a markdown post-processor) is used because Obsidian
 		// renders Mermaid asynchronously, after post-processors have run, so a
@@ -277,6 +323,7 @@ export default class WonderPlugin extends Plugin {
 				this.settingsStore,
 				this.mermaidEngine,
 				this.frontmatterToggle,
+				this.pdfExportFit,
 			),
 		);
 	}
@@ -292,6 +339,7 @@ export default class WonderPlugin extends Plugin {
 		// global it took over.
 		this.mermaidEngine.reset();
 		this.frontmatterToggle.cleanup();
+		this.pdfExportFit.cleanup();
 	}
 
 	// Open (or reveal) the Wonder Git panel as a tab in the main editor pane,

@@ -2,6 +2,7 @@ import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
 import { DEFAULT_SETTINGS, type WonderSettings } from "../../settings";
 import { fetchMermaidSource } from "./mermaid-loader";
 import type { FrontmatterToggle } from "./frontmatter-toggle";
+import type { PdfExportFit } from "./pdf-export-fit";
 import type { SettingsStore } from "../../ports/settings-store";
 import type { MermaidEnginePort } from "../../ports/mermaid-engine";
 
@@ -15,6 +16,7 @@ export class WonderSettingTab extends PluginSettingTab {
 		private store: SettingsStore<WonderSettings>,
 		private engine: MermaidEnginePort,
 		private frontmatter: FrontmatterToggle,
+		private pdfExportFit: PdfExportFit,
 	) {
 		super(app, plugin);
 	}
@@ -126,11 +128,57 @@ export class WonderSettingTab extends PluginSettingTab {
 		// ── Mermaid ──────────────────────────────────────────────────
 		this.displayMermaid();
 
+		// ── PDF export fit ───────────────────────────────────────────
+		this.displayPdfExportFit();
+
 		// ── Git history ──────────────────────────────────────────────
 		this.addHeading("Git history");
 		new Setting(this.containerEl).setDesc(
 			"Review per-file and per-commit diffs from the ribbon, the Open Git history command, or a note's right-click menu. Desktop only; no configuration needed.",
 		);
+	}
+
+	private displayPdfExportFit(): void {
+		const s = this.store.get();
+
+		new Setting(this.containerEl).setName("PDF export fit").setHeading();
+
+		new Setting(this.containerEl)
+			.setName("Enable fit mode")
+			.setDesc("Apply tight PDF export spacing and Mermaid diagram fitting.")
+			.addToggle((toggle) =>
+				toggle.setValue(s.pdfExportFitEnabled).onChange(async (value) => {
+					await this.pdfExportFit.setEnabled(value);
+				}),
+			);
+
+		new Setting(this.containerEl)
+			.setName("Page margin")
+			.setDesc("Margin in millimetres for PDF export. Use 0 for edge-to-edge.")
+			.addText((text) =>
+				text
+					.setPlaceholder(String(DEFAULT_SETTINGS.pdfExportFitPageMarginMm))
+					.setValue(String(s.pdfExportFitPageMarginMm))
+					.onChange(async (value) => {
+						await this.pdfExportFit.setPageMarginMm(value);
+					}),
+			);
+
+		new Setting(this.containerEl)
+			.setName("Maximum Mermaid height")
+			.setDesc(
+				"Maximum diagram height in millimetres before it is scaled down.",
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder(
+						String(DEFAULT_SETTINGS.pdfExportFitMaxMermaidHeightMm),
+					)
+					.setValue(String(s.pdfExportFitMaxMermaidHeightMm))
+					.onChange(async (value) => {
+						await this.pdfExportFit.setMaxMermaidHeightMm(value);
+					}),
+			);
 	}
 
 	// Mermaid rendering settings: choose a CDN version, download it (so all
