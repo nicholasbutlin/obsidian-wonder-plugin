@@ -1,3 +1,10 @@
+# [1.13.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.12.0...1.13.0) (2026-08-21)
+
+
+### Features
+
+* add command to clear stale Git lock files ([a5fec2c](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/a5fec2c51a53c4d9a6ed95ace2b82cd9edef41dd))
+
 # [1.12.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.11.1...1.12.0) (2026-06-30)
 
 
