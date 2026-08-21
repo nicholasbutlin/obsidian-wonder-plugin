@@ -11,4 +11,7 @@ export interface GitPort {
 	log(opts: { path?: string; max?: number }): Promise<string>;
 	// The unified diff a commit introduced for one file (`git show`).
 	diff(opts: { commit: string; path: string }): Promise<string>;
+	// Absolute path of the repository's git dir (`.git`, or wherever a worktree
+	// or `git dir:` pointer sends it). Null when there is no repository.
+	gitDir(): Promise<string | null>;
 }

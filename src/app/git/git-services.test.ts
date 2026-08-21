@@ -22,6 +22,9 @@ class FakeGit implements GitPort {
 	async isRepo(): Promise<boolean> {
 		return true;
 	}
+	async gitDir(): Promise<string | null> {
+		return "/vault/.git";
+	}
 	async log(opts: { path?: string; max?: number }): Promise<string> {
 		this.logCalls.push(opts);
 		return logRecord("abc123", "first") + "\n" + logRecord("def456", "second");

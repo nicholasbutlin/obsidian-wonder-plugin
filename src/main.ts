@@ -20,6 +20,8 @@ import { RefreshContextService } from "./app/context/refresh-context.service";
 import { ScanRouterService } from "./app/scan-router.service";
 import { GitCli } from "./adapters/node/git-cli.adapter";
 import { GitFileHistoryService } from "./app/git/file-history.service";
+import { GitLocksFs } from "./adapters/node/git-locks.adapter";
+import { GitClearLocksService } from "./app/git/clear-locks.service";
 import { GIT_VIEW_TYPE, GitView } from "./adapters/obsidian/views/git.view";
 import type { SettingsStore } from "./ports/settings-store";
 import { ObsidianMermaidEngine } from "./adapters/obsidian/mermaid-engine.adapter";
@@ -95,6 +97,10 @@ export default class WonderPlugin extends Plugin {
 				: null;
 		const git = new GitCli(gitRoot);
 		const gitFileHistory = new GitFileHistoryService(git);
+		const gitClearLocks = new GitClearLocksService(
+			new GitLocksFs(() => git.gitDir()),
+			notifier,
+		);
 		this.registerView(
 			GIT_VIEW_TYPE,
 			(leaf) => new GitView(leaf, gitFileHistory, git),
@@ -291,6 +297,11 @@ export default class WonderPlugin extends Plugin {
 				id: "open-git-history",
 				name: "Open Git history",
 				callback: () => this.openGitView(),
+			});
+			this.addCommand({
+				id: "clear-git-locks",
+				name: "Clear stale Git lock files",
+				callback: () => void gitClearLocks.run(),
 			});
 			this.addCommand({
 				id: "show-file-git-history",

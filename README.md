@@ -55,6 +55,15 @@ printable page. The feature is on by default and can be toggled from the ribbon,
 the **Toggle PDF export fit mode** command, or settings. Open a note in reading
 view, then use Obsidian's normal **Export to PDF** command.
 
+### Clear stale Git lock files
+
+If a git process dies part-way through (Obsidian quitting mid-sync is the usual
+cause) it leaves a `*.lock` file behind in `.git`, and every later git command —
+including Obsidian Git's — fails until the file is deleted. Run the **Clear
+stale Git lock files** command to remove them. Locks modified in the last 30
+seconds are left alone, so a commit or fetch that is still running is never
+interrupted. Desktop only.
+
 ## Settings
 
 | Setting                                | Description                                                                              | Default      |

@@ -73,6 +73,18 @@ export class GitCli implements GitPort {
 		]);
 	}
 
+	async gitDir(): Promise<string | null> {
+		if (!this.root) return null;
+		try {
+			// --absolute-git-dir resolves worktrees and `.git` files (which hold a
+			// `gitdir:` pointer) to the real directory holding the lock files.
+			const out = await this.run(["rev-parse", "--absolute-git-dir"]);
+			return out.trim() || null;
+		} catch {
+			return null; // Not a repository.
+		}
+	}
+
 	private async run(args: string[]): Promise<string> {
 		if (!this.root) throw new Error("git is unavailable on this platform");
 		const { stdout } = await getExecFile()("git", ["-C", this.root, ...args], {
