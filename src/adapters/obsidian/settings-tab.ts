@@ -112,6 +112,38 @@ export class WonderSettingTab extends PluginSettingTab {
 			},
 		);
 
+		// ── Person pages ─────────────────────────────────────────────
+		this.addHeading("Person pages");
+		this.addToggleSetting(
+			"Sync last one-to-one date",
+			"Mirror the newest dated entry heading on a person page into a frontmatter property, on save and via the Update last one-to-one dates command.",
+			settings.syncLastOneToOne,
+			(value) => {
+				settings.syncLastOneToOne = value;
+			},
+		);
+
+		this.addTextSetting(
+			"People folder",
+			"Folder holding the person pages. `_`-prefixed notes in it are skipped.",
+			DEFAULT_SETTINGS.peopleFolder,
+			settings.peopleFolder,
+			(value) => {
+				settings.peopleFolder = value.trim();
+			},
+		);
+
+		this.addTextSetting(
+			"Last one-to-one property",
+			"Frontmatter property holding the date of the newest dated entry.",
+			DEFAULT_SETTINGS.lastOneToOneProperty,
+			settings.lastOneToOneProperty,
+			(value) => {
+				settings.lastOneToOneProperty =
+					value.trim() || DEFAULT_SETTINGS.lastOneToOneProperty;
+			},
+		);
+
 		// ── Frontmatter ──────────────────────────────────────────────
 		this.addHeading("Frontmatter");
 		new Setting(this.containerEl)

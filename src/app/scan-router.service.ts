@@ -5,10 +5,12 @@ import type { SettingsStore } from "../ports/settings-store";
 import type { WonderSettings } from "../settings";
 import type { ActionCaptureService } from "./actions/action-capture.service";
 import type { DateNormalizeService } from "./dates/date-normalize.service";
+import type { LastOneToOneService } from "./people/last-one-to-one.service";
 
 // Routes a modified file, once it settles, to the right handler: Kanban board
 // files get their picker dates normalized; every other note is scanned for
-// @action markers. Owns the set of known boards used to pick the debounce delay.
+// @action markers, and person pages also get their last-one-to-one property
+// refreshed. Owns the set of known boards used to pick the debounce delay.
 export class ScanRouterService {
 	private knownBoards = new Set<string>();
 
@@ -18,6 +20,7 @@ export class ScanRouterService {
 		private settings: SettingsStore<WonderSettings>,
 		private actionCapture: ActionCaptureService,
 		private dateNormalize: DateNormalizeService,
+		private lastOneToOne: LastOneToOneService,
 	) {}
 
 	// Debounce a modified file's scan so a burst of edits triggers one run once the
@@ -64,6 +67,9 @@ export class ScanRouterService {
 		} else {
 			this.knownBoards.delete(file.path);
 			void this.actionCapture.run(file);
+			// Cheap and self-filtering: the service returns immediately for anything
+			// that is not an in-scope person page.
+			void this.lastOneToOne.run(file);
 		}
 	}
 }
