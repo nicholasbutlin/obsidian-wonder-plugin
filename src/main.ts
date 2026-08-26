@@ -17,6 +17,7 @@ import { ObsidianSettingsStore } from "./adapters/obsidian/settings-store.adapte
 import { ActionCaptureService } from "./app/actions/action-capture.service";
 import { DateNormalizeService } from "./app/dates/date-normalize.service";
 import { RefreshContextService } from "./app/context/refresh-context.service";
+import { LastOneToOneService } from "./app/people/last-one-to-one.service";
 import { ScanRouterService } from "./app/scan-router.service";
 import { GitCli } from "./adapters/node/git-cli.adapter";
 import { GitFileHistoryService } from "./app/git/file-history.service";
@@ -48,6 +49,7 @@ export default class WonderPlugin extends Plugin {
 	settingsStore!: SettingsStore<WonderSettings>;
 	scanRouter!: ScanRouterService;
 	refreshContext!: RefreshContextService;
+	lastOneToOne!: LastOneToOneService;
 	private mermaidEngine!: ObsidianMermaidEngine;
 	private frontmatterToggle!: FrontmatterToggle;
 	private pdfExportFit!: PdfExportFit;
@@ -74,12 +76,19 @@ export default class WonderPlugin extends Plugin {
 			this.settingsStore,
 		);
 		const dateNormalize = new DateNormalizeService(vault, workspace);
+		const lastOneToOne = new LastOneToOneService(
+			vault,
+			notifier,
+			this.settingsStore,
+		);
+		this.lastOneToOne = lastOneToOne;
 		this.scanRouter = new ScanRouterService(
 			scheduler,
 			metadata,
 			this.settingsStore,
 			actionCapture,
 			dateNormalize,
+			lastOneToOne,
 		);
 		this.refreshContext = new RefreshContextService(
 			vault,
@@ -284,6 +293,15 @@ export default class WonderPlugin extends Plugin {
 			id: "refresh-context",
 			name: "Refresh Context section",
 			callback: () => void this.refreshContext.run(),
+		});
+
+		// The on-save sync in ScanRouterService covers pages as they are edited;
+		// this backfills the folder in one pass, after an import or a bulk edit.
+		this.addCommand({
+			id: "sync-last-one-to-one",
+			name: "Update last one-to-one dates",
+			callback: () =>
+				void this.lastOneToOne.runAll(this.app.vault.getMarkdownFiles()),
 		});
 
 		// Git history surfaces (command, ribbon, file menu) only on desktop, where

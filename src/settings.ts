@@ -27,6 +27,11 @@ export interface WonderSettings {
 	// Show YAML frontmatter / Properties across notes. When false, frontmatter is
 	// hidden everywhere except notes with `cssclasses: show-frontmatter`.
 	showFrontmatter: boolean;
+	// Mirror the newest dated entry heading on a person page into a frontmatter
+	// property, so a Base can sort by when the one-to-one actually happened.
+	syncLastOneToOne: boolean;
+	peopleFolder: string;
+	lastOneToOneProperty: string;
 	// Tighten PDF export margins and fit Mermaid diagrams inside the page.
 	pdfExportFitEnabled: boolean;
 	pdfExportFitPageMarginMm: number;
@@ -49,6 +54,9 @@ export const DEFAULT_SETTINGS: WonderSettings = {
 	mermaidCdnCache: null,
 	mermaidDiagramTools: true,
 	showFrontmatter: false,
+	syncLastOneToOne: true,
+	peopleFolder: "Evenergi/One2One",
+	lastOneToOneProperty: "last_1_1",
 	pdfExportFitEnabled: true,
 	pdfExportFitPageMarginMm: 5,
 	pdfExportFitMaxMermaidHeightMm: 242,

@@ -19,6 +19,7 @@ function makeRouter(options: { boardPaths?: string[] } = {}) {
 	const boardPaths = new Set(options.boardPaths ?? []);
 	const scans: TFile[] = [];
 	const normalizes: TFile[] = [];
+	const oneToOnes: TFile[] = [];
 
 	const metadata: MetadataPort = {
 		isKanbanBoard: (file: TFile) => boardPaths.has(file.path),
@@ -46,6 +47,12 @@ function makeRouter(options: { boardPaths?: string[] } = {}) {
 			return Promise.resolve();
 		},
 	};
+	const lastOneToOne = {
+		run: (file: TFile) => {
+			oneToOnes.push(file);
+			return Promise.resolve(false);
+		},
+	};
 
 	const scheduler = new ObsidianScheduler({
 		register: () => {},
@@ -56,8 +63,17 @@ function makeRouter(options: { boardPaths?: string[] } = {}) {
 		store,
 		actionCapture as never,
 		dateNormalize as never,
+		lastOneToOne as never,
 	);
-	return { router, scheduler, scans, normalizes, settings, metadata };
+	return {
+		router,
+		scheduler,
+		scans,
+		normalizes,
+		oneToOnes,
+		settings,
+		metadata,
+	};
 }
 
 describe("ScanRouterService.scheduleScan", () => {
@@ -161,5 +177,16 @@ describe("ScanRouterService.scheduleScan", () => {
 		vi.advanceTimersByTime(10_000);
 
 		expect(scans).toHaveLength(0);
+	});
+	it("also refreshes the last-one-to-one property on a non-board note", () => {
+		const { router, scheduler, scans, oneToOnes } = makeRouter();
+		const file = makeTFile("Evenergi/One2One/Dan Hilson.md", "Dan Hilson");
+
+		router.scheduleScan(file);
+		vi.advanceTimersByTime(10_000);
+		void scheduler;
+
+		expect(scans).toEqual([file]);
+		expect(oneToOnes).toEqual([file]);
 	});
 });

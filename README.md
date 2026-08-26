@@ -39,6 +39,31 @@ Both `@action` and `@action:` are recognised, and every marker in a note is
 processed. Scans are debounced per file, so a burst of edits triggers a single
 pass once you settle.
 
+### Last one-to-one dates
+
+Person pages log each one-to-one under a dated heading, newest first:
+
+```md
+---
+type: person
+last_1_1: 2026-08-18
+---
+
+# 2026-08-18
+```
+
+The plugin mirrors the newest such heading into the `last_1_1` frontmatter
+property, on save and across the folder via the **Update last one-to-one dates**
+command. The property exists because Bases reads frontmatter and file properties
+only, never headings, so a base cannot sort a people index by when the
+conversation actually happened. File mtime and `updated` are no substitute:
+both record editing, and one bulk edit sets every page to the same day.
+
+Pages with no dated heading are left alone rather than given an invented date,
+writes only happen when the value changes, and `_`-prefixed reference notes in
+the folder are skipped. The folder, the property name, and the whole feature are
+configurable in settings.
+
 ### Frontmatter toggle
 
 Hide or show YAML frontmatter / Properties across all notes from a ribbon
