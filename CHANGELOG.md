@@ -1,3 +1,10 @@
+# [1.14.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.13.0...1.14.0) (2026-08-26)
+
+
+### Features
+
+* sync last one-to-one date on person pages ([e61d48a](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/e61d48af785f019b422f2bd95358ca3b1a7ba379)), closes [#17](https://github.com/nicholasbutlin/obsidian-wonder-plugin/issues/17)
+
 # [1.13.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.12.0...1.13.0) (2026-08-21)
 
 
