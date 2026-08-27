@@ -84,12 +84,21 @@ view, then use Obsidian's normal **Export to PDF** command.
 
 File any note into a single inbox folder without dragging it through the file
 explorer tree. Right-click a note (or a multi-file selection) and choose **Move
-to inbox**, or run the **Move note to inbox** command on the active note. Links
-pointing at the note are updated, the inbox folder is created if it does not
-exist, and a name already taken in the inbox is suffixed (`note 1.md`) rather
-than overwritten. Notes already in the inbox are left where they are.
+to inbox**, or run the **Move note to inbox** command on the active note. The
+inbox folder is created if it does not exist, and a name already taken in the
+inbox is suffixed (`note 1.md`) rather than overwritten.
 
-The inbox folder is set in settings as a full vault-relative path.
+The inbox folder is set in settings, and takes either form:
+
+| Setting                       | Destination                | Behaviour                                                                                     |
+| ----------------------------- | -------------------------- | --------------------------------------------------------------------------------------------- |
+| `Areas/Inbox`                 | A folder in this vault     | Links pointing at the note are updated. Notes already in the inbox are left where they are.   |
+| `/Users/me/Other Vault/Inbox` | Anywhere on the filesystem | The note leaves this vault. Links pointing at it are **not** updated, and the notice says so. |
+
+A value starting with `/`, `~`, a drive letter (`C:\Inbox`) or `\\` is read as
+an absolute filesystem path — which may be another vault's inbox. Anything else
+is vault-relative. Absolute paths are desktop only; on mobile the command
+reports that and moves nothing.
 
 ### Clear stale Git lock files
 
@@ -107,7 +116,7 @@ interrupted. Desktop only.
 | **Date Format**                        | [Moment.js](https://momentjs.com/docs/#/displaying/format/) format for the date heading. | `YYYY-MM-DD` |
 | **Kanban Path**                        | Name of the Kanban note (without `.md`) that actions are routed to.                      | `ToDo Auto`  |
 | **Process Refresh Interval (seconds)** | How long to wait after an edit before scanning a note for `@action` markers.             | `10`         |
-| **Inbox folder**                       | Full vault-relative path of the folder **Move to inbox** files notes into.               | `Inbox`      |
+| **Inbox folder**                       | Folder **Move to inbox** files notes into: vault-relative, or an absolute path.          | `Inbox`      |
 | **PDF export fit**                     | Apply tight PDF export spacing and Mermaid diagram fitting.                              | `on`         |
 | **PDF page margin**                    | Margin in millimetres for PDF export.                                                    | `5`          |
 | **PDF maximum Mermaid height**         | Maximum diagram height in millimetres before it is scaled down.                          | `242`        |

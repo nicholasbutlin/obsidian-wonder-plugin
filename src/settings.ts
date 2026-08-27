@@ -32,7 +32,9 @@ export interface WonderSettings {
 	syncLastOneToOne: boolean;
 	peopleFolder: string;
 	lastOneToOneProperty: string;
-	// Vault-relative folder the Move to inbox command/menu item files notes into.
+	// Folder the Move to inbox command/menu item files notes into. Vault-relative
+	// ("Areas/Inbox"), or an absolute filesystem path ("~/Other Vault/Inbox") to
+	// file them out of this vault entirely.
 	inboxFolder: string;
 	// Tighten PDF export margins and fit Mermaid diagrams inside the page.
 	pdfExportFitEnabled: boolean;

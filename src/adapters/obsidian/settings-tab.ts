@@ -148,7 +148,7 @@ export class WonderSettingTab extends PluginSettingTab {
 		this.addHeading("Inbox");
 		this.addTextSetting(
 			"Inbox folder",
-			"Full vault-relative path of the folder the Move to inbox command and right-click menu item file notes into. Created on demand.",
+			"Folder the Move to inbox command and right-click menu item file notes into. Created on demand. A vault-relative path (Areas/Inbox) keeps notes in this vault and updates links to them. An absolute path (/Users/me/Other Vault/Inbox, ~/Inbox, C:\\Inbox) moves notes out of this vault — into another vault, say — and leaves links to them dangling. Desktop only.",
 			DEFAULT_SETTINGS.inboxFolder,
 			settings.inboxFolder,
 			(value) => {

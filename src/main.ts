@@ -23,6 +23,7 @@ import { RefreshContextService } from "./app/context/refresh-context.service";
 import { LastOneToOneService } from "./app/people/last-one-to-one.service";
 import { MoveToInboxService } from "./app/inbox/move-to-inbox.service";
 import { ObsidianFileMover } from "./adapters/obsidian/file-mover.adapter";
+import { NodeExternalFileMover } from "./adapters/node/external-file-mover.adapter";
 import { ScanRouterService } from "./app/scan-router.service";
 import { GitCli } from "./adapters/node/git-cli.adapter";
 import { GitFileHistoryService } from "./app/git/file-history.service";
@@ -99,6 +100,7 @@ export default class WonderPlugin extends Plugin {
 			new ObsidianFileMover(this.app),
 			notifier,
 			this.settingsStore,
+			new NodeExternalFileMover(this.app),
 		);
 		this.refreshContext = new RefreshContextService(
 			vault,
