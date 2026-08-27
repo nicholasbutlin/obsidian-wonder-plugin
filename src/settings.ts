@@ -32,6 +32,8 @@ export interface WonderSettings {
 	syncLastOneToOne: boolean;
 	peopleFolder: string;
 	lastOneToOneProperty: string;
+	// Vault-relative folder the Move to inbox command/menu item files notes into.
+	inboxFolder: string;
 	// Tighten PDF export margins and fit Mermaid diagrams inside the page.
 	pdfExportFitEnabled: boolean;
 	pdfExportFitPageMarginMm: number;
@@ -57,6 +59,7 @@ export const DEFAULT_SETTINGS: WonderSettings = {
 	syncLastOneToOne: true,
 	peopleFolder: "Evenergi/One2One",
 	lastOneToOneProperty: "last_1_1",
+	inboxFolder: "Inbox",
 	pdfExportFitEnabled: true,
 	pdfExportFitPageMarginMm: 5,
 	pdfExportFitMaxMermaidHeightMm: 242,

@@ -80,6 +80,17 @@ printable page. The feature is on by default and can be toggled from the ribbon,
 the **Toggle PDF export fit mode** command, or settings. Open a note in reading
 view, then use Obsidian's normal **Export to PDF** command.
 
+### Move to inbox
+
+File any note into a single inbox folder without dragging it through the file
+explorer tree. Right-click a note (or a multi-file selection) and choose **Move
+to inbox**, or run the **Move note to inbox** command on the active note. Links
+pointing at the note are updated, the inbox folder is created if it does not
+exist, and a name already taken in the inbox is suffixed (`note 1.md`) rather
+than overwritten. Notes already in the inbox are left where they are.
+
+The inbox folder is set in settings as a full vault-relative path.
+
 ### Clear stale Git lock files
 
 If a git process dies part-way through (Obsidian quitting mid-sync is the usual
@@ -96,6 +107,7 @@ interrupted. Desktop only.
 | **Date Format**                        | [Moment.js](https://momentjs.com/docs/#/displaying/format/) format for the date heading. | `YYYY-MM-DD` |
 | **Kanban Path**                        | Name of the Kanban note (without `.md`) that actions are routed to.                      | `ToDo Auto`  |
 | **Process Refresh Interval (seconds)** | How long to wait after an edit before scanning a note for `@action` markers.             | `10`         |
+| **Inbox folder**                       | Full vault-relative path of the folder **Move to inbox** files notes into.               | `Inbox`      |
 | **PDF export fit**                     | Apply tight PDF export spacing and Mermaid diagram fitting.                              | `on`         |
 | **PDF page margin**                    | Margin in millimetres for PDF export.                                                    | `5`          |
 | **PDF maximum Mermaid height**         | Maximum diagram height in millimetres before it is scaled down.                          | `242`        |

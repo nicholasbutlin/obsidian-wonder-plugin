@@ -7,6 +7,8 @@ export class TAbstractFile {
 
 export class TFile extends TAbstractFile {
 	basename = "";
+	name = "";
+	extension = "";
 }
 
 export class Notice {

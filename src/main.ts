@@ -1,8 +1,11 @@
 import {
 	Editor,
+	EventRef,
 	FileSystemAdapter,
+	Menu,
 	Platform,
 	Plugin,
+	TAbstractFile,
 	TFile,
 	TFolder,
 } from "obsidian";
@@ -18,6 +21,8 @@ import { ActionCaptureService } from "./app/actions/action-capture.service";
 import { DateNormalizeService } from "./app/dates/date-normalize.service";
 import { RefreshContextService } from "./app/context/refresh-context.service";
 import { LastOneToOneService } from "./app/people/last-one-to-one.service";
+import { MoveToInboxService } from "./app/inbox/move-to-inbox.service";
+import { ObsidianFileMover } from "./adapters/obsidian/file-mover.adapter";
 import { ScanRouterService } from "./app/scan-router.service";
 import { GitCli } from "./adapters/node/git-cli.adapter";
 import { GitFileHistoryService } from "./app/git/file-history.service";
@@ -89,6 +94,11 @@ export default class WonderPlugin extends Plugin {
 			actionCapture,
 			dateNormalize,
 			lastOneToOne,
+		);
+		const moveToInbox = new MoveToInboxService(
+			new ObsidianFileMover(this.app),
+			notifier,
+			this.settingsStore,
 		);
 		this.refreshContext = new RefreshContextService(
 			vault,
@@ -303,6 +313,51 @@ export default class WonderPlugin extends Plugin {
 			callback: () =>
 				void this.lastOneToOne.runAll(this.app.vault.getMarkdownFiles()),
 		});
+
+		// Move to inbox: command palette for the active note, and the file
+		// explorer's right-click menu for one file or a multi-file selection.
+		this.addCommand({
+			id: "move-to-inbox",
+			name: "Move note to inbox",
+			checkCallback: (checking) => {
+				const file = this.app.workspace.getActiveFile();
+				if (!file) return false;
+				if (!checking) void moveToInbox.run([file]);
+				return true;
+			},
+		});
+		this.registerEvent(
+			this.app.workspace.on("file-menu", (menu, file) => {
+				if (!(file instanceof TFile)) return;
+				menu.addItem((item) =>
+					item
+						.setTitle("Move to inbox")
+						.setIcon("inbox")
+						.onClick(() => void moveToInbox.run([file])),
+				);
+			}),
+		);
+		// "files-menu" (a multi-file selection) is not in Obsidian's public
+		// typings yet, so the subscription is cast rather than typed.
+		type FilesMenu = (
+			name: "files-menu",
+			callback: (menu: Menu, files: TAbstractFile[]) => void,
+		) => EventRef;
+		this.registerEvent(
+			(this.app.workspace.on as unknown as FilesMenu)(
+				"files-menu",
+				(menu, files) => {
+					const notes = files.filter((f): f is TFile => f instanceof TFile);
+					if (notes.length === 0) return;
+					menu.addItem((item) =>
+						item
+							.setTitle("Move to inbox")
+							.setIcon("inbox")
+							.onClick(() => void moveToInbox.run(notes)),
+					);
+				},
+			),
+		);
 
 		// Git history surfaces (command, ribbon, file menu) only on desktop, where
 		// the git CLI is reachable. The view itself shows a graceful empty state if

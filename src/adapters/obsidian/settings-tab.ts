@@ -144,6 +144,18 @@ export class WonderSettingTab extends PluginSettingTab {
 			},
 		);
 
+		// ── Inbox ────────────────────────────────────────────────────
+		this.addHeading("Inbox");
+		this.addTextSetting(
+			"Inbox folder",
+			"Full vault-relative path of the folder the Move to inbox command and right-click menu item file notes into. Created on demand.",
+			DEFAULT_SETTINGS.inboxFolder,
+			settings.inboxFolder,
+			(value) => {
+				settings.inboxFolder = value.trim();
+			},
+		);
+
 		// ── Frontmatter ──────────────────────────────────────────────
 		this.addHeading("Frontmatter");
 		new Setting(this.containerEl)
