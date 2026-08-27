@@ -1,3 +1,10 @@
+# [1.15.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.14.0...1.15.0) (2026-08-27)
+
+
+### Features
+
+* add move to inbox shortcut ([61b2c81](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/61b2c81fe1de387bb1613811790629a7f796b868))
+
 # [1.14.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.13.0...1.14.0) (2026-08-26)
 
 
