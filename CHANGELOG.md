@@ -1,3 +1,10 @@
+# [1.16.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.15.0...1.16.0) (2026-08-27)
+
+
+### Features
+
+* allow an absolute path as the move to inbox target ([7c9f5e7](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/7c9f5e76e7e505403724976b324a016919b51dd3))
+
 # [1.15.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.14.0...1.15.0) (2026-08-27)
 
 
