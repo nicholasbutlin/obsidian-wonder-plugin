@@ -1,3 +1,10 @@
+## [1.16.1](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.16.0...1.16.1) (2026-11-16)
+
+
+### Bug Fixes
+
+* bump ELK layout to 1.x for Mermaid 12 compatibility ([3a4e438](https://github.com/nicholasbutlin/obsidian-wonder-plugin/commit/3a4e438724a33671625103c04dbd369f68bbbcba))
+
 # [1.16.0](https://github.com/nicholasbutlin/obsidian-wonder-plugin/compare/1.15.0...1.16.0) (2026-08-27)
 
 
