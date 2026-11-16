@@ -38,7 +38,7 @@ const mainOptions = {
 	outfile: "main.js",
 };
 
-// ELK (elkjs, ~1.5MB) ships as a standalone ESM file, loaded from disk on demand
+// ELK (elkjs and friends, ~2.5MB) ships as a standalone ESM file, loaded from disk on demand
 // when ELK layout is enabled, so it never weighs down main.js. Bundled with no
 // code-splitting so it's a single self-contained module importable via a blob URL.
 const elkOptions = {

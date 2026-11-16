@@ -33,6 +33,6 @@
 		"vitest": "^1.6.1"
 	},
 	"dependencies": {
-		"@mermaid-js/layout-elk": "^0.2.1"
+		"@mermaid-js/layout-elk": "^1.0.2"
 	}
 }
